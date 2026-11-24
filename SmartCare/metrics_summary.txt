@@ -1,0 +1,38 @@
+======================================================================
+ACCURACY TEST METRICS
+======================================================================
+
+Overall Accuracy: 92.2%
+Correct: 94/102
+
+PER-LABEL METRICS:
+
+hand_only:
+  TP: 20, FP: 5, FN: 0, TN: 77
+  Precision: 0.800
+  Recall: 1.000
+  F1-Score: 0.889
+
+mouth_only:
+  TP: 10, FP: 0, FN: 0, TN: 92
+  Precision: 1.000
+  Recall: 1.000
+  F1-Score: 1.000
+
+both_no_pill:
+  TP: 31, FP: 1, FN: 0, TN: 70
+  Precision: 0.969
+  Recall: 1.000
+  F1-Score: 0.984
+
+pill_intake:
+  TP: 20, FP: 0, FN: 6, TN: 76
+  Precision: 1.000
+  Recall: 0.769
+  F1-Score: 0.870
+
+nothing:
+  TP: 13, FP: 0, FN: 0, TN: 89
+  Precision: 1.000
+  Recall: 1.000
+  F1-Score: 1.000

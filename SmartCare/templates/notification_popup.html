@@ -1,0 +1,403 @@
+{% load static %}
+
+<div id="medicationNotification" class="med-notification" style="display: none;">
+    <div class="med-notification-content">
+        <div class="med-notification-header">
+            <span class="med-notification-icon" id="notifIcon">💊</span>
+            <span class="med-notification-title" id="notifTitle">Time to take your medication</span>
+            <button class="med-notification-close" id="closeNotifBtn">&times;</button>
+        </div>
+        <div class="med-notification-body">
+            <div class="med-notification-med-info">
+                <span class="med-notification-name" id="notifMedName">Medication Name</span>
+                <span class="med-notification-dosage" id="notifDosage">1 pill</span>
+            </div>
+            <div class="med-notification-timer">
+                <span class="med-notification-timer-label">Time remaining:</span>
+                <span class="med-notification-timer-value" id="notifCountdown">00:00:00</span>
+            </div>
+            {% if request.resolver_match.url_name == 'intake_verification' %}
+                <div class="med-notification-status" id="notifStatus">
+                    <span class="status-badge">🔍 Camera Active</span>
+                </div>
+            {% endif %}
+        </div>
+        <div class="med-notification-footer">
+            <a href="{% url 'intake_verification' %}" class="med-notification-btn btn-primary" id="notifTakeBtn">
+                <i class="fas fa-camera"></i> Take Now
+            </a>
+            <button class="med-notification-btn btn-secondary" id="notifSnoozeBtn">
+                <i class="fas fa-clock"></i> Snooze (5 min)
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .med-notification {
+        position: fixed;
+        bottom: 30px;
+        right: 30px;
+        z-index: 10000;
+        max-width: 420px;
+        width: 100%;
+        animation: slideUpNotif 0.4s ease-out;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        border-radius: 20px;
+    }
+
+    @keyframes slideUpNotif {
+        from {
+            transform: translateY(100px);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .med-notification-content {
+        background: white;
+        border-radius: 20px;
+        overflow: hidden;
+        border-left: 5px solid #2563eb;
+    }
+
+    .med-notification.urgent .med-notification-content {
+        border-left-color: #f59e0b;
+    }
+
+    .med-notification.late .med-notification-content {
+        border-left-color: #ef4444;
+    }
+
+    .med-notification-header {
+        padding: 16px 20px;
+        background: #f8fafc;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+
+    .med-notification-icon {
+        font-size: 28px;
+        animation: pulseNotif 1.5s infinite;
+    }
+
+    @keyframes pulseNotif {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.15); }
+    }
+
+    .med-notification-title {
+        font-size: 15px;
+        font-weight: 600;
+        color: #1e293b;
+        flex: 1;
+    }
+
+    .med-notification-close {
+        background: none;
+        border: none;
+        font-size: 24px;
+        color: #94a3b8;
+        cursor: pointer;
+        padding: 0 4px;
+        line-height: 1;
+        transition: 0.3s;
+    }
+
+    .med-notification-close:hover {
+        color: #ef4444;
+    }
+
+    .med-notification-body {
+        padding: 16px 20px;
+    }
+
+    .med-notification-med-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+    }
+
+    .med-notification-name {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1e293b;
+    }
+
+    .med-notification-dosage {
+        font-size: 14px;
+        color: #64748b;
+        background: #f1f5f9;
+        padding: 4px 12px;
+        border-radius: 20px;
+    }
+
+    .med-notification-timer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #f1f5f9;
+        padding: 10px 16px;
+        border-radius: 12px;
+        margin-bottom: 10px;
+    }
+
+    .med-notification-timer-label {
+        font-size: 13px;
+        color: #64748b;
+    }
+
+    .med-notification-timer-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: #2563eb;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .med-notification.late .med-notification-timer-value {
+        color: #ef4444;
+    }
+
+    .med-notification-status {
+        text-align: center;
+        padding: 6px;
+    }
+
+    .med-notification-status .status-badge {
+        font-size: 13px;
+        color: #22c55e;
+        font-weight: 500;
+    }
+
+    .med-notification-footer {
+        padding: 12px 20px 16px;
+        display: flex;
+        gap: 10px;
+        border-top: 1px solid #e2e8f0;
+        background: #fafafa;
+    }
+
+    .med-notification-btn {
+        padding: 10px 18px;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: 0.3s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        justify-content: center;
+        flex: 1;
+    }
+
+    .med-notification-btn.btn-primary {
+        background: #2563eb;
+        color: white;
+    }
+
+    .med-notification-btn.btn-primary:hover {
+        background: #1d4ed8;
+        transform: scale(1.02);
+    }
+
+    .med-notification-btn.btn-secondary {
+        background: #f1f5f9;
+        color: #64748b;
+    }
+
+    .med-notification-btn.btn-secondary:hover {
+        background: #e2e8f0;
+    }
+
+    .med-notification.late .med-notification-btn.btn-primary {
+        background: #ef4444;
+    }
+
+    .med-notification.late .med-notification-btn.btn-primary:hover {
+        background: #dc2626;
+    }
+
+    @media (max-width: 600px) {
+        .med-notification {
+            bottom: 10px;
+            right: 10px;
+            left: 10px;
+            max-width: none;
+        }
+        .med-notification-footer {
+            flex-direction: column;
+        }
+        .med-notification-timer {
+            flex-direction: column;
+            gap: 4px;
+        }
+    }
+</style>
+
+<script>
+// ============================================================
+// NOTIFICATION SYSTEM - Reusable across all pages
+// ============================================================
+(function() {
+    // Check if notification data exists
+    let notificationData = null;
+    let countdownInterval = null;
+    let isLate = false;
+    let isUrgent = false;
+
+    function initNotification() {
+        try {
+            // Get notification data from Django context
+            const dataElement = document.getElementById('notificationData');
+            if (dataElement) {
+                notificationData = JSON.parse(dataElement.textContent);
+                console.log('📢 Notification data loaded:', notificationData);
+            }
+        } catch (e) {
+            console.log('No notification data found');
+        }
+
+        if (!notificationData || !notificationData.show) {
+            return;
+        }
+
+        showNotification();
+        startCountdown();
+        checkStatus();
+    }
+
+    function showNotification() {
+        const notif = document.getElementById('medicationNotification');
+        if (!notif) return;
+
+        // Update content
+        document.getElementById('notifMedName').textContent = notificationData.medication_name || 'Medication';
+        document.getElementById('notifDosage').textContent = notificationData.dosage + ' pill(s)';
+        document.getElementById('notifCountdown').textContent = notificationData.countdown || '00:00:00';
+        
+        // Update title based on status
+        const titleEl = document.getElementById('notifTitle');
+        if (notificationData.is_late) {
+            titleEl.textContent = '⏰ LATE - Take now!';
+            notif.className = 'med-notification late';
+        } else if (notificationData.is_urgent) {
+            titleEl.textContent = '⚡ Urgent - Take soon!';
+            notif.className = 'med-notification urgent';
+        } else {
+            titleEl.textContent = '💊 Time to take your medication';
+            notif.className = 'med-notification';
+        }
+
+        // Show notification
+        notif.style.display = 'block';
+    }
+
+    function startCountdown() {
+        if (countdownInterval) {
+            clearInterval(countdownInterval);
+        }
+
+        // Parse target time
+        let targetTime = new Date(notificationData.target_datetime);
+        // Add 1 hour to target time for the countdown
+        targetTime.setHours(targetTime.getHours() + 1);
+
+        countdownInterval = setInterval(function() {
+            const now = new Date();
+            const diff = targetTime - now;
+            
+            if (diff <= 0) {
+                // Time's up - refresh to update status
+                clearInterval(countdownInterval);
+                window.location.reload();
+                return;
+            }
+
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            
+            const countdownEl = document.getElementById('notifCountdown');
+            if (countdownEl) {
+                countdownEl.textContent = 
+                    `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+            }
+
+            // Update urgency
+            const remainingMinutes = diff / (1000 * 60);
+            const notif = document.getElementById('medicationNotification');
+            if (remainingMinutes < 5 && notif) {
+                notif.className = 'med-notification late';
+                document.getElementById('notifTitle').textContent = '⏰ LATE - Take now!';
+            } else if (remainingMinutes < 15 && notif) {
+                notif.className = 'med-notification urgent';
+                document.getElementById('notifTitle').textContent = '⚡ Urgent - Take soon!';
+            }
+        }, 1000);
+    }
+
+    function checkStatus() {
+        // Check every 30 seconds if status has changed
+        setInterval(function() {
+            fetch('/api/notification-status/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'verified' || data.status === 'missed') {
+                        // Notification no longer needed
+                        const notif = document.getElementById('medicationNotification');
+                        if (notif) {
+                            notif.style.display = 'none';
+                            if (countdownInterval) {
+                                clearInterval(countdownInterval);
+                            }
+                        }
+                    }
+                })
+                .catch(() => {
+                    // Silently fail - keep notification
+                });
+        }, 30000);
+    }
+
+    // Close button
+    document.getElementById('closeNotifBtn')?.addEventListener('click', function() {
+        const notif = document.getElementById('medicationNotification');
+        if (notif) {
+            notif.style.display = 'none';
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+        }
+    });
+
+    // Snooze button
+    document.getElementById('notifSnoozeBtn')?.addEventListener('click', function() {
+        const notif = document.getElementById('medicationNotification');
+        if (notif) {
+            notif.style.display = 'none';
+            // Re-show after 5 minutes
+            setTimeout(function() {
+                if (notificationData && notificationData.show) {
+                    notif.style.display = 'block';
+                }
+            }, 5 * 60 * 1000);
+        }
+    });
+
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initNotification);
+    } else {
+        initNotification();
+    }
+})();
+</script>

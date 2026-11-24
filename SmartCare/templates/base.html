@@ -1,0 +1,248 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}SmartCare{% endblock %}</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Your External CSS -->
+    <link rel="stylesheet" href="{% static 'css/navbar.css' %}">
+
+    <!-- Extra CSS for specific pages -->
+    {% block extra_css %}{% endblock %}
+
+    <style>
+        /* ===== FIX: FULL HEIGHT SIDEBAR ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar - Full height & sticky */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        /* Main content - pushed to the right */
+        .main {
+            margin-left: 260px;
+            flex: 1;
+            min-height: 100vh;
+        }
+
+        /* Sidebar scrollbar styling (optional - keeps it clean) */
+        .sidebar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        /* ===== RESPONSIVE: Mobile hamburger support ===== */
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-100%);
+                width: 280px;
+                transition: transform 0.3s ease;
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main {
+                margin-left: 0;
+                padding: 20px;
+            }
+
+            .hamburger {
+                display: block !important;
+            }
+
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 999;
+            }
+
+            .sidebar-overlay.show {
+                display: block;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .main {
+                padding: 15px;
+            }
+        }
+
+        /* Hamburger button */
+        .hamburger {
+            display: none;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            z-index: 1100;
+            background: #0f172a;
+            color: white;
+            border: none;
+            font-size: 28px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .hamburger:hover {
+            background: #1e293b;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Hamburger Button (Mobile) -->
+    <button class="hamburger" id="hamburgerBtn">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Overlay (Mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- SIDEBAR (GLOBAL NAVBAR) -->
+    <div class="sidebar" id="sidebar">
+        <div>
+            <div class="logo">
+                <h1>SmartCare</h1>
+                <p>Smart Healthcare Management</p>
+            </div>
+
+            <ul class="menu">
+                <li class="{% block dashboard_active %}{% endblock %}">
+                    <a href="{% url 'main' %}" style="color: white; text-decoration: none;">Dashboard</a>
+                </li>
+                <li class="{% block schedule_active %}{% endblock %}">
+                    <a href="{% url 'schedule' %}" style="color: white; text-decoration: none;">Medicine Schedule</a>
+                </li>
+                <li class="{% block intake_active %}{% endblock %}">
+                    <a href="{% url 'intake_verification' %}" style="color: white; text-decoration: none;">Intake Verification</a>
+                </li>
+                <li class="{% block health_active %}{% endblock %}">
+                    <a href="{% url 'emotion_monitor' %}" style="color: white; text-decoration: none;">Emotion Monitoring</a>
+                </li>
+                {% comment %} <li class="{% block alerts_active %}{% endblock %}">
+                    <a href="#" style="color: white; text-decoration: none;">Alerts</a>
+                </li> {% endcomment %}
+                <li class="{% block reports_active %}{% endblock %}">
+                    <a href="{% url 'report_dashboard' %}" style="color: white; text-decoration: none;">Reports</a>
+                </li>
+
+                <li class="{% block settings_active %}{% endblock %}">
+                    <a href="{% url 'settings' %}" style="color: white; text-decoration: none;">Settings</a>
+                </li>
+
+                <li class="{% block intake_test_active %}{% endblock %}">
+                    <a href="{% url 'intake_test' %}" style="color: white; text-decoration: none;">Test</a>
+                </li>
+            </ul>
+        </div>
+
+        {% comment %}
+        <div class="profile-card">
+            <img src="https://i.pravatar.cc/150?img=56" alt="Profile">
+            <h3>{{ patient_name|default:"Ma Thida" }}</h3>
+            <p>{{ patient_age|default:"72 years old" }}</p>
+        </div>
+        {% endcomment %}
+    </div>
+
+    <!-- MAIN CONTENT (PAGE-SPECIFIC) -->
+    <div class="main">
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <!-- Extra JavaScript for specific pages -->
+    {% block extra_js %}{% endblock %}
+
+    <!-- Include the notification popup -->
+    {% include 'notification_popup.html' %}
+
+    <!-- Notification data passed from views -->
+    {% if notification_data %}
+        <script id="notificationData" type="application/json">
+            {{ notification_data|safe }}
+        </script>
+    {% endif %}
+
+    <!-- Your existing scripts -->
+    {% block scripts %}{% endblock %}
+
+    <!-- Mobile sidebar toggle script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const hamburgerBtn = document.getElementById('hamburgerBtn');
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+
+            if (hamburgerBtn) {
+                hamburgerBtn.addEventListener('click', function() {
+                    sidebar.classList.toggle('open');
+                    overlay.classList.toggle('show');
+                    document.body.style.overflow = sidebar.classList.contains('open') ? 'hidden' : 'auto';
+                });
+            }
+
+            if (overlay) {
+                overlay.addEventListener('click', function() {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('show');
+                    document.body.style.overflow = 'auto';
+                });
+            }
+
+            // Close sidebar on Escape key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('show');
+                    document.body.style.overflow = 'auto';
+                }
+            });
+
+            // Close sidebar on window resize to desktop
+            window.addEventListener('resize', function() {
+                if (window.innerWidth > 992 && sidebar.classList.contains('open')) {
+                    sidebar.classList.remove('open');
+                    overlay.classList.remove('show');
+                    document.body.style.overflow = 'auto';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

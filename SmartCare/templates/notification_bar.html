@@ -1,0 +1,182 @@
+{% load static %}
+
+<style>
+    .notification-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 10000;
+        background: #1e293b;
+        color: white;
+        padding: 12px 20px;
+        display: none;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        animation: slideDown 0.3s ease-out;
+    }
+
+    .notification-bar.show {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    @keyframes slideDown {
+        from {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .notification-content {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+
+    .notification-icon {
+        font-size: 28px;
+        animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+
+    .notification-text {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .notification-text .med-name {
+        font-weight: 700;
+        font-size: 16px;
+        color: #60a5fa;
+    }
+
+    .notification-text .med-details {
+        font-size: 13px;
+        color: #94a3b8;
+    }
+
+    .notification-timer {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: #fbbf24;
+        font-weight: 600;
+    }
+
+    .notification-timer .time {
+        font-size: 20px;
+        font-weight: 700;
+        color: #fcd34d;
+    }
+
+    .notification-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .notification-actions .btn {
+        padding: 8px 20px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.3s;
+        font-size: 14px;
+    }
+
+    .btn-take {
+        background: #22c55e;
+        color: white;
+    }
+
+    .btn-take:hover {
+        background: #16a34a;
+        transform: scale(1.05);
+    }
+
+    .btn-snooze {
+        background: #475569;
+        color: white;
+    }
+
+    .btn-snooze:hover {
+        background: #334155;
+    }
+
+    .notification-close {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0 8px;
+        transition: 0.3s;
+    }
+
+    .notification-close:hover {
+        color: #ef4444;
+    }
+
+    .notification-bar.urgent {
+        background: #7f1d1d;
+        border-bottom: 3px solid #ef4444;
+    }
+
+    .notification-bar.urgent .notification-timer {
+        color: #fca5a5;
+    }
+
+    .notification-bar.urgent .notification-timer .time {
+        color: #f87171;
+    }
+
+    .notification-bar.urgent .notification-text .med-name {
+        color: #fca5a5;
+    }
+
+    @media (max-width: 768px) {
+        .notification-bar.show {
+            flex-direction: column;
+            align-items: stretch;
+            padding: 12px 15px;
+        }
+        
+        .notification-content {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        
+        .notification-actions {
+            width: 100%;
+        }
+        
+        .notification-actions .btn {
+            flex: 1;
+            text-align: center;
+        }
+    }
+</style>
+
+<div id="notificationBar" class="notification-bar">
+    <div class="notification-content">
+        <span class="notification-icon">💊</span>
+        <div class="notification-text">
+            <span class="med-name">Time to take <span id="notifMedName">Medication</span></span>
+            <span class="med-details" id="notifDetails">Dosage: 1 pill</span>
+        </div>
+        <div class="notification-timer">
+           

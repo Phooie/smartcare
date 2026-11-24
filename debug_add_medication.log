@@ -1,0 +1,52 @@
+
+============================================================
+Time: 2026-06-30 07:32:05.126569
+New medication: verteporfin
+Existing drugs: ['abemaciclib', 'trioxsalen', 'aspirin', 'metformin']
+Checking: abemaciclib vs verteporfin
+Result: []
+Checking: trioxsalen vs verteporfin
+Result: [{'drug1': 'trioxsalen', 'drug2': 'verteporfin', 'description': 'Trioxsalen may increase the photosensitizing activities of Verteporfin.'}]
+  pending_exists: False, drug_interaction_exists: True
+
+============================================================
+Time: 2026-06-30 07:33:37.650491
+New medication: verteporfin
+Existing drugs: ['abemaciclib', 'trioxsalen', 'metformin', 'aspirin']
+Checking: abemaciclib vs verteporfin
+Result: []
+Checking: trioxsalen vs verteporfin
+Result: [{'drug1': 'trioxsalen', 'drug2': 'verteporfin', 'description': 'Trioxsalen may increase the photosensitizing activities of Verteporfin.'}]
+  pending_exists: False, drug_interaction_exists: True
+  -> Skipped (already exists)
+Checking: metformin vs verteporfin
+Result: []
+Checking: aspirin vs verteporfin
+Result: []
+
+FINAL interactions count: 0
+FINAL interactions: []
+
+No interactions - Saving directly
+============================================================
+
+============================================================
+Time: 2026-06-30 07:42:49.581497
+New medication: verteporfin
+Existing drugs: ['aspirin', 'abemaciclib', 'trioxsalen', 'metformin']
+Checking: aspirin vs verteporfin
+Result: []
+Checking: abemaciclib vs verteporfin
+Result: []
+Checking: trioxsalen vs verteporfin
+Result: [{'drug1': 'trioxsalen', 'drug2': 'verteporfin', 'description': 'Trioxsalen may increase the photosensitizing activities of Verteporfin.'}]
+  pending_exists: False, drug_interaction_exists: True
+  -> Skipped (already exists)
+Checking: metformin vs verteporfin
+Result: []
+
+FINAL interactions count: 0
+FINAL interactions: []
+
+No interactions - Saving directly
+============================================================

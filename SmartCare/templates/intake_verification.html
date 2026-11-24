@@ -1,0 +1,1432 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}SmartCare - Intake Verification{% endblock %}
+
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Intake Verification Panel</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            color: #2563eb;
+        }
+
+        .header .sub-header {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+        }
+
+        .status-badge {
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .status-badge.ready {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .status-badge.waiting {
+            background: #fef3c7;
+            color: #b45309;
+        }
+
+        .status-badge.completed {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .status-badge.notime {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .status-badge.late {
+            background: #fef3c7;
+            color: #b45309;
+        }
+
+        .status-badge .next-time {
+            font-size: 12px;
+            font-weight: 400;
+            color: #64748b;
+            margin-left: 8px;
+        }
+
+        .camera-section {
+            background: white;
+            border-radius: 24px;
+            padding: 25px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+            margin-bottom: 25px;
+        }
+
+        .camera-container {
+            position: relative;
+            width: 100%;
+            background: #1e293b;
+            border-radius: 16px;
+            overflow: hidden;
+            aspect-ratio: 16/9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .camera-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+
+        .camera-container canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .camera-container .placeholder {
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .camera-container .placeholder .icon {
+            font-size: 64px;
+            margin-bottom: 10px;
+        }
+
+        .camera-container .placeholder .no-medication {
+            font-size: 20px;
+            font-weight: 600;
+            color: #fbbf24;
+            margin-top: 10px;
+        }
+
+        .camera-container .placeholder .sub-text {
+            color: #94a3b8;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .camera-container .placeholder .sub-text strong {
+            color: #60a5fa;
+        }
+
+        .detection-status {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            font-size: 14px;
+            white-space: nowrap;
+            z-index: 10;
+        }
+
+        .detection-status.active {
+            background: #22c55e;
+            color: white;
+        }
+
+        .detection-status.inactive {
+            background: #ef4444;
+            color: white;
+        }
+
+        .detection-status.waiting {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .detection-status.detected {
+            background: #22c55e;
+            color: white;
+            animation: pulse 0.5s ease 3;
+        }
+
+        .detection-status.verified {
+            background: #22c55e;
+            color: white;
+            animation: pulse 0.3s ease 5;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: translateX(-50%) scale(1); }
+            50% { transform: translateX(-50%) scale(1.05); }
+        }
+
+        .camera-controls {
+            display: flex;
+            gap: 12px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #1d4ed8;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn-primary:disabled:hover {
+            background: #2563eb;
+        }
+
+        .btn-success {
+            background: #22c55e;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #16a34a;
+        }
+
+        .btn-success:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #dc2626;
+        }
+
+        .btn-danger:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #e2e8f0;
+        }
+
+        .btn-secondary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn-secondary:disabled:hover {
+            background: #f1f5f9;
+        }
+
+        .waiting-info {
+            margin-top: 15px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .waiting-info.warning {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+        }
+
+        .waiting-info.error {
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+        }
+
+        .waiting-info .icon {
+            font-size: 20px;
+        }
+
+        .waiting-info .text {
+            font-size: 14px;
+        }
+
+        .waiting-info .text .highlight {
+            font-weight: 600;
+        }
+
+        .waiting-info .text .time {
+            color: #2563eb;
+            font-weight: 700;
+        }
+
+        .waiting-info.warning .text .time {
+            color: #b45309;
+        }
+
+        .detection-info {
+            margin-top: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: #f8fafc;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .detection-info .status-item {
+            font-size: 13px;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .detection-info .status-item .dot {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .detection-info .status-item .dot.green {
+            background: #22c55e;
+        }
+
+        .detection-info .status-item .dot.red {
+            background: #ef4444;
+        }
+
+        .detection-info .status-item .dot.yellow {
+            background: #f59e0b;
+        }
+
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+
+        .medication-details {
+            background: white;
+            border-radius: 24px;
+            padding: 25px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+        }
+
+        .medication-details h3 {
+            font-size: 18px;
+            color: #1e293b;
+            margin-bottom: 15px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .detail-value {
+            color: #1e293b;
+            font-weight: 600;
+        }
+
+        .detail-value.late {
+            color: #b45309;
+        }
+
+        .detail-value.missed {
+            color: #dc2626;
+        }
+
+        .detail-value.verified {
+            color: #15803d;
+        }
+
+        .detail-value .dose-badge {
+            font-size: 12px;
+            font-weight: 400;
+            background: #f1f5f9;
+            padding: 2px 10px;
+            border-radius: 20px;
+            color: #64748b;
+            margin-left: 8px;
+        }
+
+        .no-medication-message {
+            text-align: center;
+            padding: 30px 0;
+            color: #64748b;
+        }
+
+        .no-medication-message .icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .no-medication-message h4 {
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .verification-log {
+            background: white;
+            border-radius: 24px;
+            padding: 25px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .verification-log h3 {
+            font-size: 18px;
+            color: #1e293b;
+            margin-bottom: 15px;
+        }
+
+        .log-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .log-item:last-child {
+            border-bottom: none;
+        }
+
+        .log-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .log-status.on_time {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .log-status.late {
+            background: #fef3c7;
+            color: #b45309;
+        }
+
+        .log-status.missed {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .log-status.verified_camera {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .log-status.verified_manual {
+            background: #e0e7ff;
+            color: #4338ca;
+        }
+
+        .graph-section {
+            background: white;
+            border-radius: 24px;
+            padding: 25px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.05);
+            margin-top: 25px;
+        }
+
+        .graph-section h3 {
+            font-size: 18px;
+            color: #1e293b;
+            margin-bottom: 15px;
+        }
+
+        .graph-container {
+            height: 300px;
+            position: relative;
+        }
+
+        .status-message {
+            margin-top: 10px;
+            padding: 12px 16px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .status-message.info {
+            background: #dbeafe;
+            color: #1d4ed8;
+            border-left: 4px solid #3b82f6;
+            display: block;
+        }
+
+        .status-message.success {
+            background: #dcfce7;
+            color: #15803d;
+            border-left: 4px solid #22c55e;
+            display: block;
+        }
+
+        .status-message.error {
+            background: #fee2e2;
+            color: #dc2626;
+            border-left: 4px solid #ef4444;
+            display: block;
+        }
+
+        .status-message.warning {
+            background: #fef3c7;
+            color: #b45309;
+            border-left: 4px solid #f59e0b;
+            display: block;
+        }
+
+        @media (max-width: 992px) {
+            .bottom-grid {
+                grid-template-columns: 1fr;
+            }
+            .header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .header .sub-header {
+                align-items: flex-start;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .header h1 {
+                font-size: 24px;
+            }
+            .detection-status {
+                font-size: 11px;
+                padding: 6px 12px;
+                white-space: normal;
+                max-width: 90%;
+            }
+            .camera-container {
+                aspect-ratio: 4/3;
+            }
+            .camera-controls {
+                flex-direction: column;
+            }
+            .camera-controls .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Header -->
+    <div class="header">
+        <div>
+            <h1>💊 Intake Verification Panel</h1>
+            <p style="color: #64748b;">Real-time hand-to-mouth detection</p>
+        </div>
+        <div class="sub-header">
+            <span class="status-badge 
+                {% if is_verification_time %}
+                    {% if current_medication.intake_status == 'late' %}late
+                    {% else %}ready{% endif %}
+                {% elif no_medication_today %}notime
+                {% elif not is_verification_time and not no_medication_today %}waiting
+                {% else %}waiting{% endif %}">
+                {% if is_verification_time %}
+                    {% if current_medication.intake_status == 'late' %}
+                        ⏰ Late - Take Now!
+                    {% else %}
+                        ✅ Ready for Intake
+                    {% endif %}
+                {% elif no_medication_today %}
+                    ⏰ No Medication Scheduled
+                {% elif not is_verification_time and not no_medication_today %}
+                    ⏳ Waiting
+                    <span class="next-time">({{ next_schedule_display }})</span>
+                {% else %}
+                    ⏳ Waiting for Scheduled Time
+                {% endif %}
+            </span>
+            {% if next_schedule_display and not is_verification_time and not no_medication_today %}
+                <span style="font-size: 13px; color: #64748b;">
+                    Next scheduled: <strong>{{ next_schedule_display }}</strong>
+                </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Camera Section -->
+    <div class="camera-section">
+        <h3 style="margin-bottom: 15px;">📷 Hand-to-Mouth Detection</h3>
+        
+        <div class="camera-container" id="cameraContainer">
+            <video id="cameraVideo" autoplay playsinline></video>
+            <canvas id="overlayCanvas"></canvas>
+            <div id="cameraPlaceholder" class="placeholder">
+                <div class="icon">📷</div>
+                {% if no_medication_today %}
+                    <div class="no-medication">⏰ No Medication Scheduled Today</div>
+                    <p class="sub-text">Please check your schedule for upcoming medications</p>
+                {% elif not is_verification_time %}
+                    <div class="no-medication" style="color: #fbbf24;">⏳ Waiting for Medication Time</div>
+                    <p class="sub-text">Next scheduled: <strong>{{ next_schedule_display }}</strong></p>
+                    <p class="sub-text" style="font-size: 12px; margin-top: 8px;">Detection will be available 5 minutes before scheduled time</p>
+                {% else %}
+                    <p>Camera feed will appear here</p>
+                    <small style="opacity: 0.7;">Click "Start Detection" to begin real-time verification</small>
+                {% endif %}
+            </div>
+            <div id="detectionStatus" class="detection-status 
+                {% if no_medication_today %}waiting
+                {% elif not is_verification_time %}waiting
+                {% else %}inactive{% endif %}">
+                {% if no_medication_today %}
+                    ⏰ No medication to verify
+                {% elif not is_verification_time %}
+                    ⏳ Waiting for {{ next_schedule_display }}
+                {% else %}
+                    ⚪ Click "Start Detection" to begin
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="camera-controls">
+            <button class="btn btn-primary" id="startBtn" 
+                {% if no_medication_today or not is_verification_time %}disabled{% endif %}>
+                <i class="fas fa-play"></i> 
+                {% if no_medication_today %}
+                    No Medication
+                {% elif not is_verification_time %}
+                    Waiting for Time
+                {% else %}
+                    Start Detection
+                {% endif %}
+            </button>
+            <button class="btn btn-danger" id="stopBtn" disabled>
+                <i class="fas fa-stop"></i> Stop
+            </button>
+            <button class="btn btn-secondary" id="manualBtn" 
+                {% if no_medication_today or not is_verification_time %}disabled{% endif %}>
+                <i class="fas fa-check"></i> Mark as Taken (Manual)
+            </button>
+        </div>
+
+        <!-- Waiting Info Messages -->
+        {% if not is_verification_time and not no_medication_today %}
+            <div class="waiting-info warning">
+                <span class="icon">⏰</span>
+                <div class="text">
+                    <p style="margin: 0; font-weight: 500; color: #b45309;">
+                        Waiting for medication time
+                    </p>
+                    <p style="margin: 0; color: #92400e; font-size: 13px;">
+                        Next scheduled: <span class="time">{{ next_schedule_display }}</span>
+                        <span style="color: #64748b; font-weight: 400; margin-left: 8px;">
+                            (available 5 min before)
+                        </span>
+                    </p>
+                </div>
+            </div>
+        {% endif %}
+
+        {% if no_medication_today %}
+            <div class="waiting-info error">
+                <span class="icon">📅</span>
+                <div class="text">
+                    <p style="margin: 0; font-weight: 500; color: #dc2626;">
+                        No medication scheduled today
+                    </p>
+                    <p style="margin: 0; color: #991b1b; font-size: 13px;">
+                        Please check your schedule for upcoming medications
+                    </p>
+                </div>
+            </div>
+        {% endif %}
+
+        <div id="statusMessage" class="status-message">
+            <span id="statusMessageText"></span>
+        </div>
+
+        <div class="detection-info">
+            <span class="status-item">
+                <span class="dot" id="handDot"></span>
+                <span id="handStatus"><i class="fas fa-hand"></i> Hand: Not detected</span>
+            </span>
+            <span class="status-item">
+                <span class="dot" id="mouthDot"></span>
+                <span id="mouthStatus"><i class="fas fa-mouth"></i> Mouth: Not detected</span>
+            </span>
+            <span class="status-item">
+                <span class="dot" id="gestureDot"></span>
+                <span id="gestureStatus"><i class="fas fa-pills"></i> Gesture: Not detected</span>
+            </span>
+            <span class="status-item" style="margin-left: auto;">
+                <span id="intakeStatus"><i class="fas fa-clock"></i> Status: Waiting</span>
+            </span>
+        </div>
+    </div>
+
+    <!-- Bottom Grid -->
+    <div class="bottom-grid">
+        <div class="medication-details">
+            <h3>💊 Current Medication</h3>
+            {% if current_medication %}
+                <div class="detail-row">
+                    <span class="detail-label">Medication</span>
+                    <span class="detail-value">{{ current_medication.medication.name }}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Dosage</span>
+                    <span class="detail-value">{{ current_medication.medication.dosage_count }} pill(s)</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Scheduled Time</span>
+                    <span class="detail-value">
+                        {{ current_medication.scheduled_time|time:"g:i A" }}
+                        {% if current_medication.dose_number > 1 %}
+                            <span class="dose-badge">Dose {{ current_medication.dose_number }}</span>
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Status</span>
+                    <span class="detail-value 
+                        {% if current_medication.intake_status == 'verified' %}verified
+                        {% elif current_medication.intake_status == 'late' %}late
+                        {% elif current_medication.intake_status == 'missed' %}missed
+                        {% endif %}">
+                        {{ current_medication.get_intake_status_display }}
+                    </span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Pills Remaining</span>
+                    <span class="detail-value">{{ current_medication.medication.pills_remaining }}</span>
+                </div>
+                {% if is_verification_time %}
+                    <div style="margin-top: 10px; padding: 10px; background: {% if current_medication.intake_status == 'late' %}#fef3c7{% else %}#dcfce7{% endif %}; border-radius: 8px; border-left: 3px solid {% if current_medication.intake_status == 'late' %}#f59e0b{% else %}#22c55e{% endif %};">
+                        <p style="font-size: 13px; color: {% if current_medication.intake_status == 'late' %}#b45309{% else %}#15803d{% endif %}; margin: 0;">
+                            <i class="fas {% if current_medication.intake_status == 'late' %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %}"></i> 
+                            {% if current_medication.intake_status == 'late' %}
+                                ⏰ This medication is LATE! Please take it now.
+                            {% else %}
+                                Click "Start Detection" and bring the pill near your mouth to verify automatically.
+                            {% endif %}
+                        </p>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="no-medication-message">
+                    <span class="icon">💊</span>
+                    <h4>Not Medication Time Yet</h4>
+                    <p>It will give you notifications when it's time to take your medication.</p>
+                    <p style="font-size: 13px; margin-top: 8px;">
+                        <a href="{% url 'schedule' %}" style="color: #2563eb; text-decoration: none;">
+                            ➜ Go to Schedule
+                        </a>
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="verification-log">
+            <h3>📋 Recent Intake Logs</h3>
+            {% if recent_logs %}
+                {% for log in recent_logs %}
+                    <div class="log-item">
+                        <div>
+                            <strong>{{ log.medication.name }}</strong>
+                            <br>
+                            <small style="color: #64748b;">
+                                {% if log.actual_take_time %}
+                                    {{ log.actual_take_time|time:"g:i A" }}
+                                {% else %}
+                                    --
+                                {% endif %}
+                                - {{ log.date|date:"M d, Y" }}
+                            </small>
+                        </div>
+                        <div>
+                            <span class="log-status {{ log.status }}">
+                                {{ log.get_status_display }}
+                            </span>
+                            {% if log.is_verified %}
+                                <span style="margin-left: 8px;">✅</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p style="color: #64748b; text-align: center; padding: 20px 0;">
+                    No intake logs available yet.
+                </p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Graph Section -->
+    <div class="graph-section">
+        <h3>📊 Intake Compliance Graph (Last 7 Days)</h3>
+        <div class="graph-container">
+            <canvas id="complianceGraph"></canvas>
+        </div>
+        <div style="margin-top: 15px; display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+            <span><span style="display: inline-block; width: 16px; height: 16px; background: #22c55e; border-radius: 4px; vertical-align: middle;"></span> On Time</span>
+            <span><span style="display: inline-block; width: 16px; height: 16px; background: #f59e0b; border-radius: 4px; vertical-align: middle;"></span> Late</span>
+            <span><span style="display: inline-block; width: 16px; height: 16px; background: #ef4444; border-radius: 4px; vertical-align: middle;"></span> Missed</span>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // ============================================================
+    // REAL-TIME HAND-TO-MOUTH DETECTION
+    // ============================================================
+    let localStream = null;
+    let cameraActive = false;
+    let detectionRunning = false;
+    let frameInterval = null;
+    let verificationInProgress = false;
+    let gestureDetected = false;
+    let frameCount = 0;
+
+    // DOM elements
+    const video = document.getElementById('cameraVideo');
+    const canvas = document.getElementById('overlayCanvas');
+    const ctx = canvas.getContext('2d');
+    const placeholder = document.getElementById('cameraPlaceholder');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const manualBtn = document.getElementById('manualBtn');
+    const detectionStatus = document.getElementById('detectionStatus');
+    const statusMessage = document.getElementById('statusMessage');
+    const statusMessageText = document.getElementById('statusMessageText');
+    const intakeStatus = document.getElementById('intakeStatus');
+    const handDot = document.getElementById('handDot');
+    const mouthDot = document.getElementById('mouthDot');
+    const gestureDot = document.getElementById('gestureDot');
+    const handStatus = document.getElementById('handStatus');
+    const mouthStatus = document.getElementById('mouthStatus');
+    const gestureStatus = document.getElementById('gestureStatus');
+
+    // Check if we have a medication to verify
+    const hasMedication = {{ is_verification_time|yesno:"true,false" }};
+    const noMedicationToday = {{ no_medication_today|yesno:"true,false" }};
+    let currentScheduleId = {{ current_schedule_id|default:'null' }};
+
+    function updateStatus(message, className) {
+        detectionStatus.textContent = message;
+        detectionStatus.className = 'detection-status ' + className;
+    }
+
+    function showMessage(message, type = 'info') {
+        statusMessage.className = 'status-message ' + type;
+        statusMessageText.textContent = message;
+        statusMessage.style.display = 'block';
+    }
+
+    function hideMessage() {
+        statusMessage.style.display = 'none';
+    }
+
+    function updateIndicators(hand, mouth, gesture) {
+        handDot.className = 'dot ' + (hand ? 'green' : 'red');
+        handStatus.innerHTML = '<i class="fas fa-hand"></i> Hand: ' + (hand ? 'Detected' : 'Not detected');
+        
+        mouthDot.className = 'dot ' + (mouth ? 'green' : 'red');
+        mouthStatus.innerHTML = '<i class="fas fa-mouth"></i> Mouth: ' + (mouth ? 'Detected' : 'Not detected');
+        
+        gestureDot.className = 'dot ' + (gesture ? 'green' : 'yellow');
+        gestureStatus.innerHTML = '<i class="fas fa-pills"></i> Gesture: ' + (gesture ? '✅ Detected!' : 'Not detected');
+    }
+
+    // ============================================================
+    // DRAW OVERLAY WITH LANDMARKS
+    // ============================================================
+    function drawOverlay(handDetected, mouthDetected, gestureDetected, handLandmarks, faceLandmarks, distance) {
+        const w = canvas.width;
+        const h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        // ===== DRAW FACE LANDMARKS =====
+        if (faceLandmarks && faceLandmarks.length > 0) {
+            // Draw face mesh (simplified - draw mouth and key points)
+            ctx.strokeStyle = 'rgba(34, 197, 94, 0.3)';
+            ctx.lineWidth = 1;
+            
+            // Draw mouth outline
+            const mouthIndices = [13, 14, 78, 308, 81, 311, 178, 402];
+            ctx.beginPath();
+            mouthIndices.forEach((idx, i) => {
+                if (idx < faceLandmarks.length) {
+                    const lm = faceLandmarks[idx];
+                    if (i === 0) {
+                        ctx.moveTo(lm.x, lm.y);
+                    } else {
+                        ctx.lineTo(lm.x, lm.y);
+                    }
+                }
+            });
+            ctx.closePath();
+            ctx.stroke();
+            ctx.fillStyle = 'rgba(34, 197, 94, 0.1)';
+            ctx.fill();
+            
+            // Draw mouth center
+            if (faceLandmarks.length > 13) {
+                const centerX = (faceLandmarks[13].x + faceLandmarks[14].x) / 2;
+                const centerY = (faceLandmarks[13].y + faceLandmarks[14].y) / 2;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 5, 0, 2 * Math.PI);
+                ctx.fillStyle = '#22c55e';
+                ctx.fill();
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
+        // ===== DRAW HAND LANDMARKS =====
+        if (handLandmarks && handLandmarks.length > 0) {
+            // Draw finger connections
+            const connections = [
+                [0, 1], [1, 2], [2, 3], [3, 4],  // Thumb
+                [0, 5], [5, 6], [6, 7], [7, 8],  // Index
+                [0, 9], [9, 10], [10, 11], [11, 12],  // Middle
+                [0, 13], [13, 14], [14, 15], [15, 16],  // Ring
+                [0, 17], [17, 18], [18, 19], [19, 20]   // Pinky
+            ];
+            
+            // Draw connections
+            ctx.strokeStyle = 'rgba(59, 130, 246, 0.6)';
+            ctx.lineWidth = 2;
+            connections.forEach(([i, j]) => {
+                if (i < handLandmarks.length && j < handLandmarks.length) {
+                    ctx.beginPath();
+                    ctx.moveTo(handLandmarks[i].x, handLandmarks[i].y);
+                    ctx.lineTo(handLandmarks[j].x, handLandmarks[j].y);
+                    ctx.stroke();
+                }
+            });
+            
+            // Draw hand points
+            handLandmarks.forEach((lm, i) => {
+                const isFingertip = [4, 8, 12, 16, 20].includes(i);
+                const radius = isFingertip ? 6 : 3;
+                const color = isFingertip ? '#3b82f6' : '#60a5fa';
+                
+                ctx.beginPath();
+                ctx.arc(lm.x, lm.y, radius, 0, 2 * Math.PI);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+                
+                // Label fingertip
+                if (isFingertip) {
+                    ctx.fillStyle = 'white';
+                    ctx.font = '10px Poppins, sans-serif';
+                    ctx.textAlign = 'center';
+                    const labels = ['Thumb', 'Index', 'Middle', 'Ring', 'Pinky'];
+                    const idx = [4, 8, 12, 16, 20].indexOf(i);
+                    ctx.fillText(labels[idx] || '', lm.x, lm.y - 10);
+                }
+            });
+        }
+
+        // ===== DRAW DISTANCE LINE =====
+        if (handLandmarks && handLandmarks.length > 0 && faceLandmarks && faceLandmarks.length > 0) {
+            const indexTip = handLandmarks[8]; // Index finger tip
+            const mouthCenterX = (faceLandmarks[13].x + faceLandmarks[14].x) / 2;
+            const mouthCenterY = (faceLandmarks[13].y + faceLandmarks[14].y) / 2;
+            
+            // Draw distance line
+            ctx.beginPath();
+            ctx.moveTo(indexTip.x, indexTip.y);
+            ctx.lineTo(mouthCenterX, mouthCenterY);
+            ctx.strokeStyle = distance && distance < 50 ? '#22c55e' : '#f59e0b';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Draw distance text
+            if (distance !== null) {
+                const midX = (indexTip.x + mouthCenterX) / 2;
+                const midY = (indexTip.y + mouthCenterY) / 2 - 15;
+                
+                ctx.fillStyle = distance < 50 ? '#22c55e' : '#f59e0b';
+                ctx.font = 'bold 14px Poppins, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${Math.round(distance)}px`, midX, midY);
+            }
+        }
+
+        // ===== DRAW STATUS TEXTS =====
+        ctx.font = '16px Poppins, sans-serif';
+        ctx.textAlign = 'left';
+        
+        // Hand status
+        ctx.fillStyle = handDetected ? '#22c55e' : '#ef4444';
+        ctx.fillText(`🖐️ ${handDetected ? 'Hand detected' : 'No hand'}`, 20, 40);
+
+        // Mouth status
+        ctx.fillStyle = mouthDetected ? '#22c55e' : '#ef4444';
+        ctx.fillText(`👄 ${mouthDetected ? 'Mouth detected' : 'No mouth'}`, 20, 70);
+
+        // Gesture status
+        if (gestureDetected) {
+            ctx.fillStyle = '#22c55e';
+            ctx.font = 'bold 20px Poppins, sans-serif';
+            ctx.fillText('✅ PILL TAKING DETECTED!', 20, 110);
+        }
+
+        // Distance status
+        if (distance !== null) {
+            const isClose = distance < 50;
+            ctx.fillStyle = isClose ? '#22c55e' : '#f59e0b';
+            ctx.font = '14px Poppins, sans-serif';
+            ctx.fillText(`📏 Distance: ${Math.round(distance)}px ${isClose ? '✅' : '⬆️ Bring closer'}`, 20, 140);
+        }
+
+        // Draw pulsing circle when gesture detected
+        if (gestureDetected) {
+            const pulse = Date.now() / 500;
+            const radius = 80 + 20 * Math.sin(pulse);
+            ctx.strokeStyle = '#22c55e';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([10, 10]);
+            ctx.beginPath();
+            ctx.arc(w/2, h/2, radius, 0, 2 * Math.PI);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+    }
+
+    // ============================================================
+    // IMMEDIATE STOP FUNCTION
+    // ============================================================
+    function immediateStopDetection() {
+        if (frameInterval) {
+            clearInterval(frameInterval);
+            frameInterval = null;
+        }
+        
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
+        }
+        
+        video.srcObject = null;
+        video.style.display = 'none';
+        placeholder.style.display = 'flex';
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        cameraActive = false;
+        detectionRunning = false;
+        
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        manualBtn.disabled = true;
+        
+        updateStatus('⚪ Stopped', 'inactive');
+        intakeStatus.textContent = '📋 Status: Stopped';
+        updateIndicators(false, false, false);
+    }
+
+    // ============================================================
+    // REDIRECT TO SCHEDULE AFTER VERIFICATION
+    // ============================================================
+    function redirectToSchedule() {
+        const notif = document.getElementById('medicationNotification');
+        if (notif) {
+            notif.style.display = 'none';
+        }
+        window.location.href = '/schedule/?refresh=true';
+    }
+
+    // ============================================================
+    // START DETECTION
+    // ============================================================
+    startBtn.addEventListener('click', async function() {
+        if (this.disabled) {
+            if (!hasMedication) {
+                alert('No medication is scheduled for verification at this time.');
+            } else {
+                alert('Please wait until 5 minutes before your scheduled medication time.');
+            }
+            return;
+        }
+
+        try {
+            console.log('📷 Starting real-time hand-to-mouth detection...');
+            hideMessage();
+            updateStatus('⏳ Starting camera...', 'waiting');
+            intakeStatus.textContent = '📋 Status: Starting camera...';
+
+            localStream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: 'user',
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                }
+            });
+
+            video.srcObject = localStream;
+            await video.play();
+
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+
+            video.style.display = 'block';
+            placeholder.style.display = 'none';
+
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            manualBtn.disabled = false;
+
+            cameraActive = true;
+            detectionRunning = true;
+            gestureDetected = false;
+            verificationInProgress = false;
+
+            updateStatus('🔍 Monitoring...', 'active');
+            intakeStatus.textContent = '📋 Status: Monitoring...';
+            showMessage('Bring the pill near your mouth to verify automatically.', 'info');
+
+            if (frameInterval) {
+                clearInterval(frameInterval);
+            }
+            frameInterval = setInterval(processFrame, 200);
+
+            console.log('✅ Detection started successfully');
+
+        } catch (error) {
+            console.error('❌ Camera error:', error);
+            updateStatus('❌ Camera error', 'inactive');
+            intakeStatus.textContent = '📋 Status: Camera error';
+            showMessage('Camera error: ' + error.message, 'error');
+            alert('Could not access camera: ' + error.message);
+        }
+    });
+
+    // ============================================================
+    // PROCESS FRAME - Updated to use get_detection_status
+    // ============================================================
+    async function processFrame() {
+        if (!detectionRunning || !cameraActive || !localStream || verificationInProgress) {
+            return;
+        }
+
+        try {
+            frameCount++;
+            
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = video.videoWidth || 640;
+            tempCanvas.height = video.videoHeight || 480;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(video, 0, 0);
+            
+            const imageData = tempCanvas.toDataURL('image/jpeg', 0.7);
+
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                            '{{ csrf_token }}';
+
+            // Send to detect_gesture endpoint
+            const response = await fetch('/detect-gesture/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    image: imageData,
+                    schedule_id: currentScheduleId
+                })
+            });
+
+            const result = await response.json();
+            
+            console.log('🔍 Detection response:', result);
+
+            if (result.status === 'success') {
+                const handDetected = result.hand_detected || false;
+                const mouthDetected = result.mouth_detected || false;
+                const gestureDetected = result.gesture_detected || false;
+                const handLandmarks = result.hand_landmarks || null;
+                const faceLandmarks = result.face_landmarks || null;
+                const distance = result.distance || null;
+
+                updateIndicators(handDetected, mouthDetected, gestureDetected);
+                drawOverlay(handDetected, mouthDetected, gestureDetected, handLandmarks, faceLandmarks, distance);
+
+                // If verified, stop detection and redirect
+                if (result.verified === true) {
+                    verificationInProgress = true;
+                    
+                    if (frameInterval) {
+                        clearInterval(frameInterval);
+                        frameInterval = null;
+                    }
+                    
+                    updateStatus('✅ Verified!', 'verified');
+                    intakeStatus.textContent = '📋 Status: Verified! ✅';
+                    showMessage(result.message || '✅ Pill intake verified!', 'success');
+                    
+                    // Close ESP32 compartments via get_detection_status
+                    await fetch(`/get-detection-status/?schedule_id=${currentScheduleId}`, {
+                        method: 'GET',
+                        headers: {
+                            'X-CSRFToken': csrfToken,
+                        }
+                    });
+                    
+                    setTimeout(() => {
+                        immediateStopDetection();
+                        redirectToSchedule();
+                    }, 1500);
+                } else if (gestureDetected && result.verified === false) {
+                    updateStatus('👀 Gesture detected - processing...', 'detected');
+                }
+            }
+
+        } catch (error) {
+            console.error('❌ Frame processing error:', error);
+        }
+    }
+
+    // ============================================================
+    // STOP BUTTON
+    // ============================================================
+    stopBtn.addEventListener('click', function() {
+        console.log('📷 Stopping detection...');
+        immediateStopDetection();
+        showMessage('Detection stopped.', 'info');
+    });
+
+    // ============================================================
+    // MANUAL TAKE BUTTON
+    // ============================================================
+    manualBtn.addEventListener('click', async function() {
+        if (this.disabled) {
+            alert('Manual verification is only available during medication time.');
+            return;
+        }
+
+        if (!currentScheduleId) {
+            alert('No active medication schedule found.');
+            return;
+        }
+
+        if (!confirm('Mark this medication as taken manually?')) {
+            return;
+        }
+
+        try {
+            manualBtn.disabled = true;
+            intakeStatus.textContent = '📋 Status: Marking as taken...';
+            showMessage('Marking as taken...', 'info');
+
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                              '{{ csrf_token }}';
+
+            const response = await fetch('/verify-intake/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    schedule_id: currentScheduleId
+                })
+            });
+
+            const result = await response.json();
+
+            if (response.ok && result.status === 'success') {
+                showMessage('✅ ' + result.message, 'success');
+                updateStatus('✅ Verified!', 'verified');
+                intakeStatus.textContent = '📋 Status: Verified! ✅';
+                
+                immediateStopDetection();
+                
+                setTimeout(() => {
+                    redirectToSchedule();
+                }, 1500);
+            } else {
+                throw new Error(result.message || 'Verification failed');
+            }
+
+        } catch (error) {
+            console.error('❌ Manual verification error:', error);
+            showMessage('❌ Verification failed: ' + error.message, 'error');
+            intakeStatus.textContent = '📋 Status: Failed';
+            manualBtn.disabled = false;
+        }
+    });
+
+    // ============================================================
+    // GRAPH INITIALIZATION
+    // ============================================================
+    function initializeGraph() {
+        const ctx = document.getElementById('complianceGraph').getContext('2d');
+
+        let labels = [];
+        let onTimeData = [];
+        let lateData = [];
+        let missedData = [];
+
+        try {
+            labels = JSON.parse('{{ graph_labels_json|escapejs|safe }}');
+            onTimeData = JSON.parse('{{ on_time_data_json|escapejs|safe }}');
+            lateData = JSON.parse('{{ late_data_json|escapejs|safe }}');
+            missedData = JSON.parse('{{ missed_data_json|escapejs|safe }}');
+        } catch (e) {
+            console.error('Error parsing graph data:', e);
+            labels = ['No Data Available'];
+            onTimeData = [0];
+            lateData = [0];
+            missedData = [0];
+        }
+
+        const hasData = onTimeData.length > 0 && onTimeData.some(v => v > 0);
+
+        if (!hasData) {
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['No Data Available'],
+                    datasets: [
+                        { label: 'On Time', data: [0], backgroundColor: ['#22c55e'], borderColor: ['#16a34a'], borderWidth: 1 },
+                        { label: 'Late', data: [0], backgroundColor: ['#f59e0b'], borderColor: ['#d97706'], borderWidth: 1 },
+                        { label: 'Missed', data: [0], backgroundColor: ['#ef4444'], borderColor: ['#dc2626'], borderWidth: 1 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { usePointStyle: true, padding: 20 } },
+                        title: { display: true, text: 'No intake data available yet.', color: '#94a3b8', font: { size: 14 } }
+                    },
+                    scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 } } }
+                }
+            });
+        } else {
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        { label: 'On Time', data: onTimeData, backgroundColor: '#22c55e', borderColor: '#16a34a', borderWidth: 1, borderRadius: 2 },
+                        { label: 'Late', data: lateData, backgroundColor: '#f59e0b', borderColor: '#d97706', borderWidth: 1, borderRadius: 2 },
+                        { label: 'Missed', data: missedData, backgroundColor: '#ef4444', borderColor: '#dc2626', borderWidth: 1, borderRadius: 2 }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'top', labels: { usePointStyle: true, padding: 20 } },
+                        title: { display: true, text: 'Daily Intake Logs (On Time vs Late vs Missed)', color: '#1e293b', font: { size: 16, weight: '600' } }
+                    },
+                    scales: {
+                        x: { stacked: true, grid: { display: false } },
+                        y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: '#e2e8f0' } }
+                    }
+                }
+            });
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', initializeGraph);
+
+    // Add this to the existing script section
+    function checkMissedPills() {
+        fetch('/api/notification-status/')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'missed' || data.status === 'pending') {
+                    // Reload to show updated status
+                    location.reload();
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    // Check every 30 seconds
+    setInterval(checkMissedPills, 30000);
+</script>
+</body>
+</html>
+{% endblock %}

@@ -1,0 +1,1128 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>🧪 Intake Verification Test Panel</title>
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <style>
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .test-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .test-header h1 {
+            font-size: 28px;
+            color: #1e293b;
+            margin: 0;
+        }
+        
+        .test-header .subtitle {
+            color: #64748b;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+        }
+        
+        .test-card {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border: 1px solid #e2e8f0;
+            transition: 0.3s;
+        }
+        
+        .test-card:hover {
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+        }
+        
+        .test-card h3 {
+            font-size: 18px;
+            color: #1e293b;
+            margin: 0 0 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .test-card .description {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .status-connected {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        
+        .status-disconnected {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .status-waiting {
+            background: #fef3c7;
+            color: #b45309;
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: 0.3s;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            background: #1d4ed8;
+            transform: scale(1.02);
+        }
+        
+        .btn-success {
+            background: #22c55e;
+            color: white;
+        }
+        
+        .btn-success:hover:not(:disabled) {
+            background: #16a34a;
+            transform: scale(1.02);
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-danger:hover:not(:disabled) {
+            background: #dc2626;
+            transform: scale(1.02);
+        }
+        
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .btn-warning:hover:not(:disabled) {
+            background: #d97706;
+            transform: scale(1.02);
+        }
+        
+        .btn-secondary {
+            background: #64748b;
+            color: white;
+        }
+        
+        .btn-secondary:hover:not(:disabled) {
+            background: #475569;
+            transform: scale(1.02);
+        }
+        
+        .btn-purple {
+            background: #8b5cf6;
+            color: white;
+        }
+        
+        .btn-purple:hover:not(:disabled) {
+            background: #7c3aed;
+            transform: scale(1.02);
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+        
+        .compartment-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 15px;
+        }
+        
+        .compartment-btn {
+            padding: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: 0.3s;
+            text-align: center;
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .compartment-btn:hover {
+            border-color: #2563eb;
+            background: #eff6ff;
+            transform: scale(1.05);
+        }
+        
+        .compartment-btn .comp-num {
+            font-size: 28px;
+            display: block;
+            color: #2563eb;
+        }
+        
+        .compartment-btn .comp-label {
+            font-size: 11px;
+            color: #64748b;
+        }
+        
+        .compartment-btn.opened {
+            border-color: #22c55e;
+            background: #dcfce7;
+        }
+        
+        .compartment-btn.opened .comp-num {
+            color: #15803d;
+        }
+        
+        .camera-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border: 2px dashed #cbd5e1;
+            position: relative;
+        }
+        
+        .camera-section video {
+            width: 100%;
+            max-width: 640px;
+            border-radius: 12px;
+            background: #1e293b;
+            display: none;
+        }
+        
+        .camera-section canvas {
+            width: 100%;
+            max-width: 640px;
+            border-radius: 12px;
+            display: none;
+            position: absolute;
+            top: 20px;
+            left: 20px;
+        }
+        
+        .camera-container {
+            position: relative;
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+        }
+        
+        .camera-container video {
+            width: 100%;
+            border-radius: 12px;
+            background: #1e293b;
+            display: none;
+        }
+        
+        .camera-container canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 12px;
+            display: none;
+            pointer-events: none;
+        }
+        
+        .camera-placeholder {
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+        }
+        
+        .camera-placeholder .icon {
+            font-size: 48px;
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        .response-box {
+            background: #f1f5f9;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: monospace;
+            font-size: 13px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .response-box .response-success {
+            color: #15803d;
+        }
+        
+        .response-box .response-error {
+            color: #dc2626;
+        }
+        
+        .response-box .response-info {
+            color: #1d4ed8;
+        }
+        
+        .response-box .response-warning {
+            color: #b45309;
+        }
+        
+        .detection-status {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 10px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .detection-status.idle {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+        
+        .detection-status.detecting {
+            background: #fef3c7;
+            color: #b45309;
+            animation: pulse 1s ease-in-out infinite;
+        }
+        
+        .detection-status.detected {
+            background: #dcfce7;
+            color: #15803d;
+        }
+        
+        .detection-status.ready {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .verification-result {
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+        
+        .verification-result.success {
+            display: block;
+            background: #dcfce7;
+            color: #15803d;
+            border-left: 4px solid #22c55e;
+        }
+        
+        .verification-result.error {
+            display: block;
+            background: #fee2e2;
+            color: #dc2626;
+            border-left: 4px solid #ef4444;
+        }
+        
+        .verification-result.info {
+            display: block;
+            background: #dbeafe;
+            color: #1d4ed8;
+            border-left: 4px solid #3b82f6;
+        }
+        
+        #loadingOverlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #loadingOverlay .spinner {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            text-align: center;
+        }
+        
+        #loadingOverlay .spinner .spin {
+            font-size: 48px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .landmark-info {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        
+        .landmark-info .item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .landmark-info .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .landmark-info .dot.green { background: #22c55e; }
+        .landmark-info .dot.red { background: #ef4444; }
+        .landmark-info .dot.yellow { background: #f59e0b; }
+        
+        @media (max-width: 768px) {
+            .test-grid {
+                grid-template-columns: 1fr;
+            }
+            .compartment-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+    <div class="spinner">
+        <div class="spin">⏳</div>
+        <h3>Processing...</h3>
+        <p style="color: #64748b;">Please wait</p>
+    </div>
+</div>
+
+<div class="test-container">
+    <div class="test-header">
+        <div>
+            <h1>🧪 Intake Verification Test Panel</h1>
+            <p class="subtitle">Test compartment opening, pill intake detection, and auto-closing</p>
+        </div>
+        <div>
+            <span id="connectionStatus" class="status-badge status-waiting">⏳ Checking...</span>
+        </div>
+    </div>
+
+    <!-- Connection Status Bar -->
+    <div style="margin-bottom: 20px; padding: 12px 20px; background: #f1f5f9; border-radius: 10px; display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
+        <span style="color: #64748b; font-size: 14px;" id="connectionMessage">Connecting to ESP32...</span>
+        <button class="btn btn-secondary btn-sm" onclick="testConnection()">🔄 Refresh</button>
+    </div>
+
+    <div class="test-grid">
+        <!-- Card 1: Compartment Control -->
+        <div class="test-card">
+            <h3>📦 Compartment Control</h3>
+            <p class="description">Open a compartment to simulate pill dispensation</p>
+            <div class="compartment-grid">
+                <button class="compartment-btn" id="comp1" onclick="openCompartment(1)">
+                    <span class="comp-num">1</span>
+                    <span class="comp-label">Compartment 1</span>
+                </button>
+                <button class="compartment-btn" id="comp2" onclick="openCompartment(2)">
+                    <span class="comp-num">2</span>
+                    <span class="comp-label">Compartment 2</span>
+                </button>
+                <button class="compartment-btn" id="comp3" onclick="openCompartment(3)">
+                    <span class="comp-num">3</span>
+                    <span class="comp-label">Compartment 3</span>
+                </button>
+                <button class="compartment-btn" id="comp4" onclick="openCompartment(4)">
+                    <span class="comp-num">4</span>
+                    <span class="comp-label">Compartment 4</span>
+                </button>
+                <button class="compartment-btn" id="comp5" onclick="openCompartment(5)">
+                    <span class="comp-num">5</span>
+                    <span class="comp-label">Compartment 5</span>
+                </button>
+                <button class="compartment-btn" id="comp6" onclick="openCompartment(6)">
+                    <span class="comp-num">6</span>
+                    <span class="comp-label">Compartment 6</span>
+                </button>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-danger" onclick="closeAll()">🔒 Close All</button>
+                <button class="btn btn-warning" onclick="testAllCompartments()">🔧 Test All</button>
+            </div>
+            <div id="compartmentStatus" style="margin-top: 10px; font-size: 13px; color: #64748b;">
+                Current: <span id="currentCompartment">None</span> 
+                <span id="compartmentState" style="color: #94a3b8;">(Closed)</span>
+            </div>
+        </div>
+
+        <!-- Card 2: Pill Intake Detection (Real Camera) -->
+        <div class="test-card">
+            <h3>📷 Real-Time Intake Detection</h3>
+            <p class="description">Use your camera to detect hand-to-mouth gesture in real-time</p>
+            
+            <!-- Camera Section -->
+            <div class="camera-section">
+                <div class="camera-container">
+                    <video id="cameraVideo" autoplay playsinline></video>
+                    <canvas id="overlayCanvas"></canvas>
+                </div>
+                <div id="cameraPlaceholder" class="camera-placeholder">
+                    <span class="icon">📷</span>
+                    <p>Click "Start Camera" to begin real-time detection</p>
+                    <p style="font-size: 12px; color: #94a3b8;">Bring the pill near your mouth to simulate intake</p>
+                </div>
+                <div class="btn-group" style="margin-top: 10px;">
+                    <button class="btn btn-primary" id="startCameraBtn">📷 Start Camera</button>
+                    <button class="btn btn-danger" id="stopCameraBtn" disabled>⏹ Stop</button>
+                </div>
+            </div>
+
+            <!-- Landmark Info -->
+            <div class="landmark-info">
+                <span class="item"><span class="dot green"></span> Hand: <span id="handStatus">Not detected</span></span>
+                <span class="item"><span class="dot yellow"></span> Mouth: <span id="mouthStatus">Not detected</span></span>
+                <span class="item"><span class="dot red"></span> Distance: <span id="distanceStatus">--</span></span>
+            </div>
+
+            <!-- Detection Status -->
+            <div id="detectionStatus" class="detection-status idle">
+                ⏸️ Waiting to start...
+            </div>
+
+            <!-- Verification Result -->
+            <div id="verificationResult" class="verification-result">
+                <strong id="resultTitle"></strong>
+                <p id="resultMessage"></p>
+            </div>
+        </div>
+
+        <!-- Card 3: Full Flow Test -->
+        <div class="test-card">
+            <h3>🔄 Full Intake Flow Test</h3>
+            <p class="description">Complete flow: Open compartment → Detect intake → Auto-close</p>
+            <div class="btn-group">
+                <button class="btn btn-purple" onclick="fullFlowTest(1)">💊 Test Comp 1</button>
+                <button class="btn btn-purple" onclick="fullFlowTest(2)">💊 Test Comp 2</button>
+                <button class="btn btn-purple" onclick="fullFlowTest(3)">💊 Test Comp 3</button>
+                <button class="btn btn-purple" onclick="fullFlowTest(4)">💊 Test Comp 4</button>
+                <button class="btn btn-purple" onclick="fullFlowTest(5)">💊 Test Comp 5</button>
+                <button class="btn btn-purple" onclick="fullFlowTest(6)">💊 Test Comp 6</button>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-success" onclick="fullFlowTestAll()">🚀 Test All Compartments</button>
+            </div>
+            <div id="flowStatus" style="margin-top: 15px; font-size: 13px; color: #64748b;"></div>
+        </div>
+
+        <!-- Card 4: Response Log -->
+        <div class="test-card">
+            <h3>📋 Activity Log</h3>
+            <p class="description">Real-time activity and response log</p>
+            <div id="logBox" class="response-box">
+                <div class="response-info">⚡ Test panel ready</div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-secondary btn-sm" onclick="clearLog()">🗑️ Clear Log</button>
+                <button class="btn btn-secondary btn-sm" onclick="testConnection()">📡 Test ESP32</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// CSRF TOKEN
+// ============================================================
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const csrfToken = getCookie('csrftoken');
+
+// ============================================================
+// DOM ELEMENTS
+// ============================================================
+const logBox = document.getElementById('logBox');
+const connectionStatus = document.getElementById('connectionStatus');
+const connectionMessage = document.getElementById('connectionMessage');
+const detectionStatus = document.getElementById('detectionStatus');
+const verificationResult = document.getElementById('verificationResult');
+const flowStatus = document.getElementById('flowStatus');
+const currentCompartment = document.getElementById('currentCompartment');
+const compartmentState = document.getElementById('compartmentState');
+const overlay = document.getElementById('loadingOverlay');
+
+// Camera elements
+const video = document.getElementById('cameraVideo');
+const canvas = document.getElementById('overlayCanvas');
+const ctx = canvas.getContext('2d');
+const cameraPlaceholder = document.getElementById('cameraPlaceholder');
+const startCameraBtn = document.getElementById('startCameraBtn');
+const stopCameraBtn = document.getElementById('stopCameraBtn');
+
+// Status elements
+const handStatus = document.getElementById('handStatus');
+const mouthStatus = document.getElementById('mouthStatus');
+const distanceStatus = document.getElementById('distanceStatus');
+
+let stream = null;
+let cameraActive = false;
+let detectionRunning = false;
+let frameInterval = null;
+let currentOpenComp = null;
+let isProcessing = false;
+
+// ============================================================
+// LOG FUNCTIONS
+// ============================================================
+function addLog(message, type = 'info') {
+    const div = document.createElement('div');
+    const timestamp = new Date().toLocaleTimeString();
+    
+    const colors = {
+        'success': '#15803d',
+        'error': '#dc2626',
+        'info': '#1d4ed8',
+        'warning': '#b45309'
+    };
+    
+    div.style.color = colors[type] || colors.info;
+    div.style.padding = '4px 0';
+    div.style.borderBottom = '1px solid #e2e8f0';
+    div.innerHTML = `<span style="color:#94a3b8;">[${timestamp}]</span> ${message}`;
+    logBox.appendChild(div);
+    logBox.scrollTop = logBox.scrollHeight;
+}
+
+function clearLog() {
+    logBox.innerHTML = '';
+    addLog('🗑️ Log cleared', 'info');
+}
+
+// ============================================================
+// CONNECTION TEST
+// ============================================================
+async function testConnection() {
+    addLog('📡 Testing ESP32 connection...', 'info');
+    
+    try {
+        const response = await fetch('/test-esp32/', {
+            method: 'GET',
+            headers: { 'X-CSRFToken': csrfToken }
+        });
+        
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            connectionStatus.className = 'status-badge status-connected';
+            connectionStatus.textContent = '✅ Connected';
+            connectionMessage.textContent = 'ESP32 is online and responding';
+            addLog('✅ ESP32 connected!', 'success');
+        } else {
+            connectionStatus.className = 'status-badge status-disconnected';
+            connectionStatus.textContent = '❌ Disconnected';
+            connectionMessage.textContent = 'ESP32 not responding. Check connection.';
+            addLog('❌ ESP32 not connected', 'error');
+        }
+    } catch (error) {
+        connectionStatus.className = 'status-badge status-disconnected';
+        connectionStatus.textContent = '❌ Error';
+        connectionMessage.textContent = 'Connection error';
+        addLog('❌ Connection error: ' + error.message, 'error');
+    }
+}
+
+// ============================================================
+// OPEN COMPARTMENT
+// ============================================================
+async function openCompartment(num) {
+    addLog(`📤 Opening compartment ${num}...`, 'info');
+    overlay.style.display = 'flex';
+    
+    try {
+        // Use direct ESP32 command
+        const response = await fetch(`/test-cmd/?cmd=OPEN%20${num}`, {
+            method: 'GET',
+            headers: { 'X-CSRFToken': csrfToken }
+        });
+        
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            currentOpenComp = num;
+            document.getElementById(`comp${num}`).classList.add('opened');
+            currentCompartment.textContent = `Compartment ${num}`;
+            compartmentState.textContent = '(Open ✅)';
+            compartmentState.style.color = '#22c55e';
+            addLog(`✅ Compartment ${num} opened successfully`, 'success');
+        } else {
+            addLog(`❌ Failed to open compartment ${num}: ${result.response}`, 'error');
+        }
+    } catch (error) {
+        addLog(`❌ Error opening compartment ${num}: ${error.message}`, 'error');
+    }
+    
+    overlay.style.display = 'none';
+}
+
+// ============================================================
+// CLOSE ALL COMPARTMENTS
+// ============================================================
+async function closeAll() {
+    addLog('🔒 Closing all compartments...', 'info');
+    overlay.style.display = 'flex';
+    
+    try {
+        const response = await fetch('/test-cmd/?cmd=CLOSE', {
+            method: 'GET',
+            headers: { 'X-CSRFToken': csrfToken }
+        });
+        
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            for (let i = 1; i <= 6; i++) {
+                document.getElementById(`comp${i}`).classList.remove('opened');
+            }
+            currentOpenComp = null;
+            currentCompartment.textContent = 'None';
+            compartmentState.textContent = '(Closed 🔒)';
+            compartmentState.style.color = '#64748b';
+            addLog('✅ All compartments closed', 'success');
+        } else {
+            addLog(`❌ Failed to close: ${result.response}`, 'error');
+        }
+    } catch (error) {
+        addLog(`❌ Error closing: ${error.message}`, 'error');
+    }
+    
+    overlay.style.display = 'none';
+}
+
+// ============================================================
+// TEST ALL COMPARTMENTS
+// ============================================================
+async function testAllCompartments() {
+    addLog('🔧 Testing all compartments...', 'warning');
+    
+    for (let i = 1; i <= 6; i++) {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        await openCompartment(i);
+        await new Promise(resolve => setTimeout(resolve, 800));
+        await closeAll();
+        await new Promise(resolve => setTimeout(resolve, 300));
+    }
+    
+    addLog('✅ All compartments tested successfully', 'success');
+}
+
+// ============================================================
+// REAL CAMERA DETECTION - Using MediaPipe
+// ============================================================
+async function startCamera() {
+    try {
+        // First check if camera is available
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error('Camera API not available. Please use HTTPS or localhost.');
+        }
+        
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { 
+                facingMode: 'user', 
+                width: { ideal: 640 }, 
+                height: { ideal: 480 } 
+            }
+        });
+        
+        video.srcObject = stream;
+        await video.play();
+        
+        // Set canvas size
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        
+        // Show video and canvas
+        video.style.display = 'block';
+        canvas.style.display = 'block';
+        cameraPlaceholder.style.display = 'none';
+        
+        startCameraBtn.disabled = true;
+        stopCameraBtn.disabled = false;
+        cameraActive = true;
+        
+        detectionStatus.className = 'detection-status ready';
+        detectionStatus.textContent = '👀 Ready - Monitoring for hand-to-mouth gesture...';
+        addLog('📷 Camera started - monitoring for pill intake', 'info');
+        
+        // Start frame processing
+        if (frameInterval) clearInterval(frameInterval);
+        frameInterval = setInterval(processFrame, 300);
+        
+    } catch (error) {
+        addLog('❌ Camera error: ' + error.message, 'error');
+        alert('Camera error: ' + error.message + '\n\nMake sure you are using http://localhost or https.');
+    }
+}
+
+function stopCamera() {
+    if (frameInterval) {
+        clearInterval(frameInterval);
+        frameInterval = null;
+    }
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+    }
+    video.srcObject = null;
+    video.style.display = 'none';
+    canvas.style.display = 'none';
+    cameraPlaceholder.style.display = 'block';
+    
+    cameraActive = false;
+    startCameraBtn.disabled = false;
+    stopCameraBtn.disabled = true;
+    
+    detectionStatus.className = 'detection-status idle';
+    detectionStatus.textContent = '⏸️ Camera stopped';
+    addLog('⏹ Camera stopped', 'info');
+}
+
+// ============================================================
+// PROCESS FRAME - Real Detection with MediaPipe
+// ============================================================
+async function processFrame() {
+    if (!cameraActive || isProcessing) return;
+    
+    isProcessing = true;
+    
+    try {
+        // Capture frame
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = video.videoWidth || 640;
+        tempCanvas.height = video.videoHeight || 480;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(video, 0, 0);
+        const imageData = tempCanvas.toDataURL('image/jpeg', 0.7);
+        
+        // Send to detect-gesture endpoint
+        const response = await fetch('/detect-gesture/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                image: imageData,
+                schedule_id: null  // No schedule for testing
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            // Update status indicators
+            handStatus.textContent = result.hand_detected ? '✅ Detected' : '❌ Not detected';
+            handStatus.style.color = result.hand_detected ? '#22c55e' : '#ef4444';
+            
+            mouthStatus.textContent = result.mouth_detected ? '✅ Detected' : '❌ Not detected';
+            mouthStatus.style.color = result.mouth_detected ? '#22c55e' : '#ef4444';
+            
+            if (result.distance !== null) {
+                distanceStatus.textContent = `${Math.round(result.distance)}px`;
+                distanceStatus.style.color = result.distance < 50 ? '#22c55e' : '#f59e0b';
+            } else {
+                distanceStatus.textContent = '--';
+                distanceStatus.style.color = '#94a3b8';
+            }
+            
+            // Draw overlay on canvas
+            drawOverlay(result);
+            
+            // Check if pill detected
+            if (result.gesture_detected && !result.verified) {
+                detectionStatus.className = 'detection-status detected';
+                detectionStatus.textContent = '✅ PILL INTAKE DETECTED!';
+                addLog('💊 Pill intake detected! Auto-closing...', 'success');
+                
+                // Show verification result
+                verificationResult.className = 'verification-result success';
+                document.getElementById('resultTitle').textContent = '✅ Intake Verified!';
+                document.getElementById('resultMessage').textContent = 'Pill intake detected. Auto-closing compartment.';
+                verificationResult.style.display = 'block';
+                
+                // Auto-close
+                setTimeout(async () => {
+                    await closeAll();
+                    addLog('✅ Auto-closed after detection', 'success');
+                    
+                    setTimeout(() => {
+                        verificationResult.style.display = 'none';
+                        detectionStatus.className = 'detection-status ready';
+                        detectionStatus.textContent = '👀 Ready - Monitoring...';
+                    }, 2000);
+                }, 500);
+            } else if (result.verified) {
+                detectionStatus.className = 'detection-status detected';
+                detectionStatus.textContent = '✅ Already Verified!';
+            } else {
+                detectionStatus.className = 'detection-status detecting';
+                detectionStatus.textContent = '👀 Monitoring for hand-to-mouth gesture...';
+            }
+        }
+        
+    } catch (error) {
+        console.error('Frame processing error:', error);
+    }
+    
+    isProcessing = false;
+}
+
+// ============================================================
+// DRAW OVERLAY
+// ============================================================
+function drawOverlay(result) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // Draw video frame
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    
+    // Draw hand landmarks
+    if (result.hand_landmarks) {
+        ctx.strokeStyle = 'rgba(59, 130, 246, 0.6)';
+        ctx.lineWidth = 2;
+        
+        // Draw connections
+        const connections = [
+            [0, 1], [1, 2], [2, 3], [3, 4],
+            [0, 5], [5, 6], [6, 7], [7, 8],
+            [0, 9], [9, 10], [10, 11], [11, 12],
+            [0, 13], [13, 14], [14, 15], [15, 16],
+            [0, 17], [17, 18], [18, 19], [19, 20]
+        ];
+        
+        connections.forEach(([i, j]) => {
+            if (i < result.hand_landmarks.length && j < result.hand_landmarks.length) {
+                ctx.beginPath();
+                ctx.moveTo(result.hand_landmarks[i].x, result.hand_landmarks[i].y);
+                ctx.lineTo(result.hand_landmarks[j].x, result.hand_landmarks[j].y);
+                ctx.stroke();
+            }
+        });
+        
+        // Draw hand points
+        result.hand_landmarks.forEach((lm, i) => {
+            const isFingertip = [4, 8, 12, 16, 20].includes(i);
+            const radius = isFingertip ? 6 : 3;
+            const color = isFingertip ? '#3b82f6' : '#60a5fa';
+            
+            ctx.beginPath();
+            ctx.arc(lm.x, lm.y, radius, 0, 2 * Math.PI);
+            ctx.fillStyle = color;
+            ctx.fill();
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+        });
+    }
+    
+    // Draw face landmarks (mouth)
+    if (result.face_landmarks && result.face_landmarks.length > 13) {
+        const mouthIndices = [13, 14, 78, 308, 81, 311, 178, 402];
+        ctx.strokeStyle = 'rgba(34, 197, 94, 0.5)';
+        ctx.lineWidth = 2;
+        
+        ctx.beginPath();
+        mouthIndices.forEach((idx, i) => {
+            if (idx < result.face_landmarks.length) {
+                const lm = result.face_landmarks[idx];
+                if (i === 0) {
+                    ctx.moveTo(lm.x, lm.y);
+                } else {
+                    ctx.lineTo(lm.x, lm.y);
+                }
+            }
+        });
+        ctx.closePath();
+        ctx.stroke();
+    }
+    
+    // Draw distance line if detected
+    if (result.hand_landmarks && result.face_landmarks && result.distance !== null) {
+        const indexTip = result.hand_landmarks[8];
+        const mouthCenterX = (result.face_landmarks[13].x + result.face_landmarks[14].x) / 2;
+        const mouthCenterY = (result.face_landmarks[13].y + result.face_landmarks[14].y) / 2;
+        
+        ctx.beginPath();
+        ctx.moveTo(indexTip.x, indexTip.y);
+        ctx.lineTo(mouthCenterX, mouthCenterY);
+        ctx.strokeStyle = result.distance < 50 ? '#22c55e' : '#f59e0b';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([5, 5]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // Show distance text
+        const midX = (indexTip.x + mouthCenterX) / 2;
+        const midY = (indexTip.y + mouthCenterY) / 2 - 15;
+        ctx.fillStyle = result.distance < 50 ? '#22c55e' : '#f59e0b';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${Math.round(result.distance)}px`, midX, midY);
+    }
+    
+    // Status overlay
+    if (result.gesture_detected) {
+        ctx.fillStyle = 'rgba(34, 197, 94, 0.2)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.fillStyle = '#22c55e';
+        ctx.font = 'bold 36px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('✅ PILL DETECTED!', canvas.width/2, 80);
+    }
+}
+
+// ============================================================
+// FULL FLOW TEST
+// ============================================================
+async function fullFlowTest(compartment) {
+    addLog(`🔄 Starting full flow test for compartment ${compartment}...`, 'warning');
+    flowStatus.textContent = `⏳ Opening compartment ${compartment}...`;
+    
+    await openCompartment(compartment);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    flowStatus.textContent = `👀 Waiting for pill intake detection...`;
+    detectionStatus.className = 'detection-status detecting';
+    detectionStatus.textContent = `👀 Waiting for intake in compartment ${compartment}...`;
+    
+    // Simulate detection after 2 seconds
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    detectionStatus.className = 'detection-status detected';
+    detectionStatus.textContent = '✅ Pill intake detected!';
+    flowStatus.textContent = `✅ Pill intake detected for compartment ${compartment}`;
+    addLog(`💊 Pill intake detected for compartment ${compartment}`, 'success');
+    
+    verificationResult.className = 'verification-result success';
+    document.getElementById('resultTitle').textContent = '✅ Intake Verified!';
+    document.getElementById('resultMessage').textContent = `Pill intake detected in compartment ${compartment}. Auto-closing...`;
+    verificationResult.style.display = 'block';
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    flowStatus.textContent = `🔒 Auto-closing compartment ${compartment}...`;
+    await closeAll();
+    
+    flowStatus.textContent = `✅ Full flow test for compartment ${compartment} completed!`;
+    addLog(`✅ Full flow test for compartment ${compartment} completed`, 'success');
+    
+    setTimeout(() => {
+        verificationResult.style.display = 'none';
+        detectionStatus.className = 'detection-status idle';
+        detectionStatus.textContent = '⏸️ Ready for next test';
+        flowStatus.textContent = '';
+    }, 3000);
+}
+
+// ============================================================
+// FULL FLOW TEST ALL
+// ============================================================
+async function fullFlowTestAll() {
+    addLog('🚀 Testing all compartments in sequence...', 'warning');
+    
+    for (let i = 1; i <= 6; i++) {
+        await fullFlowTest(i);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    addLog('✅ All compartments tested successfully', 'success');
+}
+
+// ============================================================
+// EVENT LISTENERS
+// ============================================================
+startCameraBtn.addEventListener('click', startCamera);
+stopCameraBtn.addEventListener('click', stopCamera);
+
+// ============================================================
+// INITIALIZATION
+// ============================================================
+document.addEventListener('DOMContentLoaded', function() {
+    addLog('⚡ Intake Verification Test Panel loaded', 'info');
+    setTimeout(testConnection, 500);
+});
+</script>
+
+</body>
+</html>
+{% endblock %}

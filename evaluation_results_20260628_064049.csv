@@ -1,0 +1,8 @@
+Metric,Value
+Total Frames,202
+Hand Detected,114
+Mouth Detected,202
+Hand Near Mouth,31
+Avg Latency (ms),42.7512792077395
+Min Latency (ms),31.69083595275879
+Max Latency (ms),64.35561180114746

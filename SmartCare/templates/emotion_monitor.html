@@ -1,0 +1,439 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Emotion & Behavior Monitor</title>
+    <style>
+        .monitor-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        .emotion-panel {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .emotion-display {
+            font-size: 72px;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .emotion-badge {
+            padding: 8px 20px;
+            border-radius: 30px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        
+        .emotion-happy { background: #dcfce7; color: #15803d; }
+        .emotion-neutral { background: #fef3c7; color: #b45309; }
+        .emotion-sad { background: #dbeafe; color: #1d4ed8; }
+        .emotion-angry { background: #fee2e2; color: #dc2626; }
+        .emotion-fear { background: #f3e8ff; color: #7c3aed; }
+        .emotion-surprise { background: #fefce8; color: #a16207; }
+        .emotion-disgust { background: #fef2f2; color: #991b1b; }
+        
+        .anomaly-alert {
+            background: #fee2e2;
+            border-left: 5px solid #dc2626;
+            padding: 16px;
+            border-radius: 12px;
+            margin: 10px 0;
+            animation: pulse 1s ease-in-out 3;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.02); }
+        }
+        
+        .camera-container {
+            width: 100%;
+            max-width: 640px;
+            margin: 0 auto;
+            background: #1e293b;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .camera-container video {
+            width: 100%;
+            display: none;
+        }
+        
+        .camera-container canvas {
+            width: 100%;
+            height: auto;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        
+        .stat-card .value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2563eb;
+        }
+        
+        .stat-card .label {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+        
+        .emotion-timeline {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .emotion-timeline .item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .emotion-timeline .item .emotion {
+            font-weight: 600;
+        }
+        
+        .emotion-timeline .item .time {
+            color: #64748b;
+            font-size: 12px;
+        }
+        
+        @media (max-width: 768px) {
+            .monitor-container {
+                grid-template-columns: 1fr;
+            }
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🧠 Emotion & Behavior Monitor</h1>
+    <p style="color: #64748b;">Real-time emotion detection with LSTM autoencoder anomaly detection</p>
+    
+    <!-- Stats -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="value" id="emotionDisplay">😐</div>
+            <div class="label">Current Emotion</div>
+        </div>
+        <div class="stat-card">
+            <div class="value" id="confidenceDisplay">0%</div>
+            <div class="label">Confidence</div>
+        </div>
+        <div class="stat-card">
+            <div class="value" id="adherenceDisplay">0%</div>
+            <div class="label">Medication Adherence</div>
+        </div>
+        <div class="stat-card">
+            <div class="value" id="anomalyScore">0.00</div>
+            <div class="label">Anomaly Score</div>
+        </div>
+    </div>
+    
+    <!-- Alert Banner -->
+    <div id="alertBanner" style="display: none;" class="anomaly-alert">
+        <strong>⚠️ ANOMALY DETECTED!</strong>
+        <p id="alertMessage">Alert sent to caregiver. Unusual behavior pattern detected.</p>
+    </div>
+    
+    <div class="monitor-container">
+        <!-- Camera Panel -->
+        <div class="emotion-panel">
+            <h3>📷 Camera Feed</h3>
+            <div class="camera-container">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="canvas"></canvas>
+            </div>
+            <div style="margin-top: 15px; display: flex; gap: 10px;">
+                <button class="btn btn-primary" id="startMonitor">▶ Start Monitoring</button>
+                <button class="btn btn-danger" id="stopMonitor" disabled>⏹ Stop</button>
+            </div>
+        </div>
+        
+        <!-- Emotion Timeline -->
+        <div class="emotion-panel">
+            <h3>📊 Emotion Timeline</h3>
+            <div id="emotionBadge" class="emotion-badge emotion-neutral">Waiting...</div>
+            <div class="emotion-timeline" id="emotionTimeline">
+                <p style="color: #94a3b8; text-align: center; padding: 20px;">
+                    Start monitoring to see emotions
+                </p>
+            </div>
+            
+            <div style="margin-top: 15px; padding: 12px; background: #f8fafc; border-radius: 8px;">
+                <h4 style="font-size: 14px;">📋 LSTM Autoencoder Status</h4>
+                <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                    <span>Status: <span id="lstmStatus">Not trained</span></span>
+                    <span>Data points: <span id="dataPoints">0</span></span>
+                    <span>Threshold: <span id="thresholdDisplay">0.00</span></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ============================================================
+// EMOTION MONITOR - REAL-TIME PROCESSING
+// ============================================================
+
+let stream = null;
+let monitoring = false;
+let frameInterval = null;
+let emotionHistory = [];
+
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+const startBtn = document.getElementById('startMonitor');
+const stopBtn = document.getElementById('stopMonitor');
+const emotionDisplay = document.getElementById('emotionDisplay');
+const confidenceDisplay = document.getElementById('confidenceDisplay');
+const adherenceDisplay = document.getElementById('adherenceDisplay');
+const anomalyScore = document.getElementById('anomalyScore');
+const alertBanner = document.getElementById('alertBanner');
+const alertMessage = document.getElementById('alertMessage');
+const emotionTimeline = document.getElementById('emotionTimeline');
+const emotionBadge = document.getElementById('emotionBadge');
+
+// ===== EMOTION EMOJIS =====
+const emotionEmojis = {
+    'happy': '😊',
+    'neutral': '😐',
+    'sad': '😢',
+    'angry': '😡',
+    'fear': '😨',
+    'surprise': '😮',
+    'disgust': '🤢'
+};
+
+const emotionColors = {
+    'happy': 'emotion-happy',
+    'neutral': 'emotion-neutral',
+    'sad': 'emotion-sad',
+    'angry': 'emotion-angry',
+    'fear': 'emotion-fear',
+    'surprise': 'emotion-surprise',
+    'disgust': 'emotion-disgust'
+};
+
+// ===== START MONITORING =====
+startBtn.addEventListener('click', async function() {
+    try {
+        // Get camera
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }
+        });
+        
+        video.srcObject = stream;
+        await video.play();
+        
+        canvas.width = video.videoWidth || 640;
+        canvas.height = video.videoHeight || 480;
+        
+        video.style.display = 'block';
+        
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        monitoring = true;
+        
+        // Start processing
+        if (frameInterval) clearInterval(frameInterval);
+        frameInterval = setInterval(processFrame, 200);
+        
+        // Get initial adherence data
+        updateAdherence();
+        
+    } catch (error) {
+        alert('Camera error: ' + error.message);
+    }
+});
+
+// ===== STOP MONITORING =====
+stopBtn.addEventListener('click', function() {
+    if (frameInterval) {
+        clearInterval(frameInterval);
+        frameInterval = null;
+    }
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+    }
+    video.srcObject = null;
+    video.style.display = 'none';
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    monitoring = false;
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+});
+
+// ===== PROCESS FRAME =====
+async function processFrame() {
+    if (!monitoring) return;
+    
+    try {
+        // Capture frame
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = video.videoWidth;
+        tempCanvas.height = video.videoHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+        tempCtx.drawImage(video, 0, 0);
+        const imageData = tempCanvas.toDataURL('image/jpeg', 0.7);
+        
+        // Get adherence data
+        const adherence = await getAdherenceData();
+        
+        // Send to server
+        const response = await fetch('/process-emotion-frame/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                image: imageData,
+                adherence: adherence
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            // Update UI
+            const emoji = emotionEmojis[result.emotion] || '😐';
+            emotionDisplay.textContent = emoji;
+            confidenceDisplay.textContent = Math.round(result.confidence * 100) + '%';
+            
+            // Update badge
+            emotionBadge.textContent = result.emotion.toUpperCase();
+            emotionBadge.className = 'emotion-badge ' + (emotionColors[result.emotion] || 'emotion-neutral');
+            
+            // Update anomaly score
+            if (result.anomaly_detected) {
+                anomalyScore.textContent = result.anomaly_score.toFixed(2);
+                anomalyScore.style.color = '#dc2626';
+                
+                // Show alert
+                alertBanner.style.display = 'block';
+                alertMessage.textContent = result.message || 'Alert sent to caregiver!';
+                
+                // Play alert sound (optional)
+                playAlertSound();
+            } else {
+                anomalyScore.textContent = '0.00';
+                anomalyScore.style.color = '#64748b';
+                alertBanner.style.display = 'none';
+            }
+            
+            // Update timeline
+            if (result.emotion_history) {
+                updateTimeline(result.emotion_history);
+            }
+        }
+        
+    } catch (error) {
+        console.error('Frame processing error:', error);
+    }
+}
+
+// ===== UPDATE TIMELINE =====
+function updateTimeline(history) {
+    if (!history || history.length === 0) return;
+    
+    emotionTimeline.innerHTML = '';
+    history.slice(-20).reverse().forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        const emoji = emotionEmojis[item.emotion] || '😐';
+        div.innerHTML = `
+            <span class="emotion">${emoji} ${item.emotion}</span>
+            <span class="time">${new Date(item.timestamp).toLocaleTimeString()}</span>
+        `;
+        emotionTimeline.appendChild(div);
+    });
+}
+
+// ===== GET ADHERENCE DATA =====
+async function getAdherenceData() {
+    try {
+        const response = await fetch('/api/notification-status/');
+        const data = await response.json();
+        return {
+            daily_compliance: data.compliance || 0,
+            missed_pills: data.missed || 0,
+            stress_level: data.stress || 0
+        };
+    } catch {
+        return { daily_compliance: 0.5, missed_pills: 0, stress_level: 0 };
+    }
+}
+
+function updateAdherence() {
+    getAdherenceData().then(data => {
+        adherenceDisplay.textContent = Math.round(data.daily_compliance * 100) + '%';
+    });
+}
+
+// ===== PLAY ALERT SOUND =====
+function playAlertSound() {
+    try {
+        const audio = new Audio('/static/sounds/alert.mp3');
+        audio.play();
+    } catch (e) {
+        console.log('Alert sound not available');
+    }
+}
+
+// ===== COOKIE HELPER =====
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Update adherence every 10 seconds
+setInterval(updateAdherence, 10000);
+</script>
+</body>
+</html>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}SmartCare - Approve Medication{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card" style="max-width: 600px; margin: 50px auto;">
+        <div class="card-header">
+            <h2>👨‍⚕️ Caregiver Approval Required</h2>
+        </div>
+        <div class="modal-body">
+            <h3>{{ pending.name }}</h3>
+            <p><strong>Dosage:</strong> {{ pending.dosage_count }} pill(s) per day</p>
+            <p><strong>Schedule Time:</strong> {{ pending.scheduled_time|time:"g:i A" }}</p>
+            <p><strong>Start Date:</strong> {{ pending.start_date }}</p>
+            
+            {% if interactions %}
+            <div class="interaction-item red" style="margin-top: 20px;">
+                <h4>⚠️ Potential Interactions Detected</h4>
+                {% for interaction in interactions %}
+                <p><strong>{{ interaction.drug1 }} + {{ interaction.drug2 }}</strong><br>
+                {{ interaction.description }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <form method="POST" style="margin-top: 30px;">
+                {% csrf_token %}
+                <div style="display: flex; gap: 15px; justify-content: center;">
+                    <button type="submit" class="approve-btn">✅ Approve & Add</button>
+                    <a href="{% url 'deny_medication' pending.approval_token %}" class="deny-btn">❌ Deny</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    background: white;
+    border-radius: 24px;
+    padding: 25px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+}
+.card-header {
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+.card-header h2 {
+    margin: 0;
+    color: #1e293b;
+}
+.interaction-item {
+    padding: 15px;
+    border-radius: 16px;
+    margin-bottom: 12px;
+    text-align: left;
+}
+.interaction-item.red {
+    background: #fff1f2;
+    border-left: 5px solid #ef4444;
+}
+.approve-btn {
+    background: #22c55e;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 14px;
+}
+.approve-btn:hover {
+    background: #16a34a;
+}
+.deny-btn {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    display: inline-block;
+}
+.deny-btn:hover {
+    background: #dc2626;
+}
+</style>
+{% endblock %}

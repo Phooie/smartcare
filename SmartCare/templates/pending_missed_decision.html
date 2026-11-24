@@ -1,0 +1,217 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Missed Pill Decision</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f1f5f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header .icon {
+            font-size: 64px;
+            margin-bottom: 10px;
+        }
+        .header h1 {
+            font-size: 24px;
+            color: #1e293b;
+            margin: 0;
+        }
+        .header p {
+            color: #64748b;
+            margin-top: 5px;
+        }
+        .card {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .card .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .card .row:last-child {
+            border-bottom: none;
+        }
+        .card .label {
+            color: #64748b;
+            font-weight: 500;
+        }
+        .card .value {
+            color: #1e293b;
+            font-weight: 600;
+        }
+        .warning-box {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .warning-box p {
+            margin: 0;
+            color: #92400e;
+            font-size: 14px;
+        }
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        .btn {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 16px;
+            cursor: pointer;
+            transition: 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .btn-green {
+            background: #22c55e;
+            color: white;
+        }
+        .btn-green:hover {
+            background: #16a34a;
+        }
+        .btn-red {
+            background: #ef4444;
+            color: white;
+        }
+        .btn-red:hover {
+            background: #dc2626;
+        }
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+        .form-group {
+            margin-top: 15px;
+        }
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            font-size: 14px;
+            color: #334155;
+            margin-bottom: 5px;
+        }
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: 'Poppins', sans-serif;
+            resize: vertical;
+        }
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .note {
+            text-align: center;
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="icon">⚠️</div>
+            <h1>Missed Pill Decision</h1>
+            <p>{{ pending.medication.name }} was dispensed but not taken</p>
+        </div>
+
+        <div class="card">
+            <div class="row">
+                <span class="label">Medication</span>
+                <span class="value">{{ pending.medication.name }}</span>
+            </div>
+            <div class="row">
+                <span class="label">Dosage</span>
+                <span class="value">{{ pending.medication.dosage_count }} pill(s)</span>
+            </div>
+            <div class="row">
+                <span class="label">Scheduled Time</span>
+                <span class="value">{{ pending.scheduled_time|time:"g:i A" }}</span>
+            </div>
+            <div class="row">
+                <span class="label">Missed At</span>
+                <span class="value">{{ pending.missed_at|time:"g:i A" }}</span>
+            </div>
+            <div class="row">
+                <span class="label">Pills Remaining</span>
+                <span class="value">{{ pending.medication.pills_remaining }}</span>
+            </div>
+        </div>
+
+        <div class="warning-box">
+            <p>⚠️ The pill was dispensed from the smart box but the patient did not take it within 15 minutes.</p>
+        </div>
+
+        <form method="POST">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label>Notes (optional)</label>
+                <textarea name="notes" rows="3" placeholder="Add any notes about this decision..."></textarea>
+            </div>
+
+            <div class="actions">
+                <button type="submit" class="btn btn-green">
+                    ✅ {{ action_text }}
+                </button>
+                <a href="{% url 'schedule' %}" class="btn btn-secondary">↩ Return to Schedule</a>
+            </div>
+
+            <div class="note">
+                This decision will be logged and reflected in the pill inventory.
+                <br>
+                {% if action == 'keep' %}
+                <span style="color: #15803d;">Keep: Pill count stays the same.</span>
+                {% else %}
+                <span style="color: #dc2626;">Discard: Pill count will be reduced.</span>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</body>
+</html>
+{% endblock %}

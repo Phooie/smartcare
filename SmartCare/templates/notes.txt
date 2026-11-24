@@ -1,0 +1,135 @@
+//don't forget to change IP 
+// It is recommended to run on chrome browser
+admin
+admin1234
+cd C:\Users\Acer
+pill\Scripts\activate.bat
+cd C:\Users\Acer\SmartCare
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --unsafely-treat-insecure-origin-as-secure="http://172.20.10.13:8000" --user-data-dir="C:\temp\chrome_dev"
+python manage.py runserver 172.20.10.13:8000
+http://172.20.10.13:8000/
+
+python manage.py runserver
+
+python manage.py runserver 0.0.0.0:8000
+
+python manage.py runserver 172.20.10.2:8000
+python manage.py runsslserver 172.20.10.13:8000
+python manage.py runsslserver 0.0.0.0:8000
+
+pip uninstall django-sslserver
+pip install django-sslserver==1.0.0
+
+http://172.20.20.253:8000
+
+
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --unsafely-treat-insecure-origin-as-secure="http://172.20.20.253:8000" --user-data-dir="C:\temp\chrome_dev"
+python manage.py runserver 172.20.20.253:8000
+http://172.20.20.253:8000/
+
+
+"C:\Program Files\Google\Chrome\Application\chrome.exe" --unsafely-treat-insecure-origin-as-secure="http://172.20.21.139:8000" --user-data-dir="C:\temp\chrome_dev"
+python manage.py runserver 172.20.21.139:8000
+http://172.20.21.139:8000/
+
+
+
+
+http://172.20.10.13:8000/test-esp32/	Test ESP32 connection
+http://172.20.10.13:8000/test-cmd/?cmd=STATUS	Get ESP32 status
+http://172.20.10.13:8000/test-cmd/?cmd=FETCH	Fetch schedule on ESP32
+http://172.20.10.13:8000/test-cmd/?cmd=ALARM	Test buzzer
+http://172.20.10.13:8000/test-cmd/?cmd=OPEN%201	Open compartment 1
+http://172.20.10.13:8000/test-cmd/?cmd=OPEN%202	Open compartment 2
+http://172.20.10.13:8000/test-cmd/?cmd=OPEN%203	Open compartment 3
+http://172.20.10.13:8000/test-cmd/?cmd=OPEN%204	Open compartment 4
+http://172.20.10.13:8000/test-cmd/?cmd=OPEN%205	Open compartment 5
+http://172.20.10.13:8000/test-cmd/?cmd=OPEN%206
+http://172.20.10.13:8000/test-cmd/?cmd=CLOSE	Close all compartments
+
+http://172.20.10.13:8000/	Dashboard (main page)
+http://172.20.10.13:8000/schedule/	Medication schedule
+http://172.20.10.13:8000/intake-verification/	Camera verification page
+http://172.20.10.13:8000/admin/	Django Admin panel
+
+http://172.20.10.13:8000/api/arduino/schedule/	Get schedule as JSON (ESP32 uses this)
+http://172.20.10.13:8000/api/schedule/	Get schedule as JSON
+http://172.20.10.13:8000/api/notification-status/
+
+
+GET http://172.20.10.13:8000/api/arduino/schedule/
+
+
+http://172.20.10.13:8000/api/arduino/schedule/
+http://172.20.10.13:8000/test-cmd/?cmd=OPEN%201
+
+http://172.20.10.13:8000/test-cmd/?cmd=ALARM
+
+
+http://192.168.100.219:8000/test-esp32/	Test ESP32 connection
+http://192.168.100.219:8000/test-cmd/?cmd=STATUS	Get ESP32 status
+http://192.168.100.219:8000/test-cmd/?cmd=FETCH	Fetch schedule on ESP32
+http://192.168.100.219:8000/test-cmd/?cmd=ALARM	Test buzzer
+http://192.168.100.219:8000/test-cmd/?cmd=OPEN%201	Open compartment 1
+http://192.168.100.219:8000/test-cmd/?cmd=OPEN%202	Open compartment 2
+http://192.168.100.219:8000/test-cmd/?cmd=OPEN%203	Open compartment 3
+http://192.168.100.219:8000/test-cmd/?cmd=OPEN%204	Open compartment 4
+http://192.168.100.219:8000/test-cmd/?cmd=OPEN%205	Open compartment 5
+http://192.168.100.219:8000/test-cmd/?cmd=OPEN%206
+http://192.168.100.219:8000/test-cmd/?cmd=CLOSE	Close all compartments
+
+http://192.168.100.219:8000/	Dashboard (main page)
+http://192.168.100.219:8000/schedule/	Medication schedule
+http://192.168.100.219:8000/intake-verification/	Camera verification page
+http://192.168.100.219:8000/admin/	Django Admin panel
+
+http://192.168.100.219:8000/api/arduino/schedule/	Get schedule as JSON (ESP32 uses this)
+http://192.168.100.219:8000/api/schedule/	Get schedule as JSON
+http://192.168.100.219:8000/api/notification-status/
+
+
+GET http://192.168.100.219:8000/api/arduino/schedule/
+
+
+http://192.168.100.219:8000/api/arduino/schedule/
+http://192.168.100.219:8000/test-cmd/?cmd=OPEN%201
+
+http://192.168.100.219:8000/test-cmd/?cmd=ALARM
+
+
+
+medicine already exists function
+separate medicine graph for each pill
+remove in database if pill is removed in UI
+
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ 1. User clicks "Verify" on Schedule page or opens Intake page      │
+└─────────────────────────────────────────────────────────────────────┘
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│ 2. Django: trigger_medication_dose() sends to ESP32:               │
+│    - "ALARM" → Buzzer plays melody                                 │
+│    - "OPEN 1,2" → Servos rotate 180°                              │
+└─────────────────────────────────────────────────────────────────────┘
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│ 3. User takes pill from opened compartment                         │
+└─────────────────────────────────────────────────────────────────────┘
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│ 4. Intake Verification page: Camera detects hand-to-mouth gesture  │
+│    - MediaPipe Hand Landmarker + Face Landmarker                   │
+│    - Calculates distance between index tip and mouth center        │
+└─────────────────────────────────────────────────────────────────────┘
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│ 5. Django: get_detection_status() sends to ESP32: "CLOSE"          │
+│    - Servos return to 0° (closed)                                  │
+│    - mark_taken() updates database                                 │
+│    - Logs created                                                  │
+└─────────────────────────────────────────────────────────────────────┘
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│ 6. User redirected back to Schedule page with updated status       │
+└─────────────────────────────────────────────────────────────────────┘

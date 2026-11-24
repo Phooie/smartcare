@@ -1,0 +1,1887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Campus Safety Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.0/css/all.min.css" integrity="sha512-DxV+EoADOkOygM4IR9yXP8Sb2qwgidEmeqAEmDKIOfPRQZOWbXCzLC6vjbZyy0vPisbH2SyW27+ddLVCN+OMzQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<style>
+ /* Clean Dark Mode Styles */
+[data-theme="dark"] {
+  /* Main backgrounds */
+  --bg-primary: #0f172a;
+  --bg-secondary: #1e293b;
+  --bg-card: #334155;
+  
+  /* Text colors */
+  --text-primary: #457ee2ff;
+  --text-secondary: #d6bf5aff;
+}
+
+/* Apply dark mode */
+[data-theme="dark"] body {
+  background-color: var(--bg-primary) !important;
+  color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] header {
+  background-color: var(--bg-secondary) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Card backgrounds */
+[data-theme="dark"] .bg-blue-50,
+[data-theme="dark"] .bg-cyan-50,
+[data-theme="dark"] .bg-slate-300,
+[data-theme="dark"] .bg-blue-100 {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: #475569 !important;
+}
+
+/* Ensure text remains visible */
+[data-theme="dark"] .text-gray-500,
+[data-theme="dark"] .text-gray-600,
+[data-theme="dark"] .text-gray-700,
+[data-theme="dark"] .text-gray-800 {
+  color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .text-gray-900 {
+  color: var(--text-primary) !important;
+}
+
+    .map-container { height: 380px; width: 100%; border-radius: 0.75rem; }
+    .alert-high { background-color: rgba(248, 113, 113, 0.2); }
+    .alert-medium { background-color: rgba(250, 204, 21, 0.2); }
+    .alert-low { background-color: rgba(52, 211, 153, 0.2); }
+    .blink {
+        animation: blink 1s step-end infinite;
+    }
+    @keyframes blink {
+        50% { opacity: 0; }
+    }
+    .video-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        pointer-events: none;
+    }
+    .detection-box {
+        position: absolute;
+        border: 2px solid red;
+        background-color: rgba(255, 0, 0, 0.1);
+        z-index: 100;
+    }
+    .grid-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+    .emergency-btn {
+        background: linear-gradient(45deg, #ff0000, #ff6b6b);
+        box-shadow: 0 4px 6px rgba(255, 0, 0, 0.3);
+        transition: all 0.3s ease;
+    }
+    .emergency-btn:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 8px rgba(255, 0, 0, 0.4);
+    }
+    .status-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        z-index: 10;
+    }
+    .camera-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+    }
+    .map-marker {
+        width: 20px;
+        height: 20px;
+        background: red;
+        border-radius: 50% 50% 50% 0;
+        transform: rotate(-45deg);
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        margin: -20px 0 0 -10px;
+    }
+    .map-marker::after {
+        content: '';
+        width: 14px;
+        height: 14px;
+        background: white;
+        border-radius: 50%;
+        position: absolute;
+        left: 3px;
+        top: 3px;
+    }
+</style>
+</head>
+
+<body class="min-h-screen bg-gray-300 text-gray-800">
+
+    <header class="sticky top-0 z-30 bg-gray-200 text-gray-800 p-4 shadow-md">
+    <div class="mx-auto max-w-7xl px-6 py-3 flex items-center justify-between">
+        <!-- Left: Logo / Title -->
+        <div class="flex items-center gap-1">
+            <i class="fa-solid fa-building-columns text-blue-700 text-3xl"></i>
+            <span class="font-bold text-blue-800 text-xl drop-shadow-md">AI Campus Safety Threat Detection & Alert System</span>
+        </div>
+
+        <!-- Right: Notification / Messages / Profile -->
+       <!-- Messages - Link to Gmail Inbox -->
+            {% comment %} <div class="relative">
+                <a href="https://mail.google.com/mail/u/0/#inbox" target="_blank" class="p-2 rounded hover:bg-gray-100 block">
+                    <i class="fa-regular fa-envelope w-6 h-6 text-black-300 text-xl"></i>
+                </a>
+                <!-- The red notification dot can be kept for visual effect -->
+                <span class="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full px-1.5"></span>
+            </div> {% endcomment %}
+
+        <!-- Theme Toggle -->
+          <div class="flex items-center gap-2">
+            <button id="theme-toggle" type="button" 
+                    class="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition">
+                <i class="fa-solid fa-moon text-gray-700 dark:text-yellow-400"></i>
+                <span id="theme-text" class="text-sm font-medium text-gray-700 dark:text-white">Dark Mode</span>
+            </button>
+       
+            <!-- Notification Button -->
+            <a href="https://mail.google.com/mail/u/0/#inbox" target="_blank" 
+            class="emergency-btn px-3 py-2 rounded-lg flex items-center gap-2 text-white hover:scale-105 transition">
+                <i class="fas fa-bell"></i>
+                <span class="text-sm font-medium">Noti alert</span>
+            </a>
+
+        </div>
+    </div>
+</header>
+
+
+<div class="mx-auto max-w-7xl flex flex-col lg:flex-row gap-6 px-4 py-6">
+<div class="min-h-screen flex flex-col">
+    <div class="mx-auto w-full max-w-[95vw] flex flex-1 flex-col lg:flex-row gap-6 px-4 py-6">
+        <!-- Sidebar - Now with right margin and rounded -->
+        <aside class="lg:w-64 bg-blue-100 shadow-xl rounded-2xl flex flex-col h-fit lg:mr-6 ml-auto lg:ml-0">
+            <!-- Your existing sidebar nav content remains exactly the same here -->
+            <nav class="flex-1 px-4 py-6 space-y-2">
+                <a href="#dashboard" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-blue-100 hover:text-blue-700 transition">
+                    <i class="fas fa-home"></i> <span>Dashboard</span>
+                <a>
+        <a href="#camera-grid" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-blue-100 hover:text-blue-700 transition">
+            <i class="fa-solid fa-camera"></i> <span>Camera Feed</span>
+        </a>
+        <a href="#video-analysis" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-blue-100 hover:text-blue-700 transition">
+            <i class="fa-solid fa-video"></i> <span>Video Feed</span>
+        </a>
+        <!-- Messages - Link to Gmail Inbox -->
+        <a href="https://mail.google.com/mail/u/0/#inbox" target="_blank" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-blue-100 hover:text-blue-700 transition">
+            <i class="fa-solid fa-envelope"></i> <span>Email</span>
+        </a>
+        <a href="#threat-stats" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-blue-100 hover:text-blue-700 transition">
+            <i class="fa-solid fa-chart-simple"></i> <span>Reports</span>
+        </a>
+
+        <!-- Logout -->
+        <div class="px-0 py-4 border-t border-gray-100">
+            <a href="{% url 'logout' %}" class="flex items-center gap-3 px-4 py-3 rounded-xl text-gray-700 hover:bg-red-100 hover:text-red-600 transition">
+                <i class="fas fa-sign-out-alt"></i> <span>Logout</span>
+            </a>
+        </div>
+    </nav>
+</aside>
+
+
+    <main class="flex-1 grid gap-4">
+        {% comment %} <!-- System Status Cards --> 
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 ">
+            <div class="bg-blue-50 border border-gray-200 rounded-xl p-4 shadow-sm ">
+                <div class="flex items-center justify-between ">
+                    <h3 class="text-xs text-gray-500">Active Alerts</h3>
+                    <i class="fas fa-bell text-yellow-500"></i>
+                </div>
+                <p class="text-2xl font-semibold mt-2">5</p>
+                <p class="text-xs text-gray-500 mt-1">Last 24 hours: 12</p>
+            </div>
+            <div class="bg-blue-50 border border-gray-200 rounded-xl p-4 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs text-gray-500">System Status</h3>
+                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                </div>
+                <p class="text-2xl font-semibold mt-2">Operational</p>
+                <p class="text-xs text-gray-500 mt-1">AI: ✔ | CCTV: ✔ | Comms: ✔</p>
+            </div>
+            <div class="bg-blue-50 border border-gray-200 rounded-xl p-4 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs text-gray-500">Uptime</h3>
+                    <i class="fas fa-server text-blue-500"></i>
+                </div>
+                <p class="text-2xl font-semibold mt-2">99.98%</p>
+                <p class="text-xs text-gray-500 mt-1">Last restart: 5 days ago</p>
+            </div>
+            <div class="bg-blue-50 border border-gray-200 rounded-xl p-4 shadow-sm">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs text-gray-500">Cameras Online</h3>
+                    <i class="fas fa-video text-purple-500"></i>
+                </div>
+                <p class="text-2xl font-semibold mt-2">3/4</p>
+                <p class="text-xs text-gray-500 mt-1">Main gate camera offline</p>
+            </div>
+        </section> {% endcomment %}
+
+        <!-- Campus Map and Threat Stats --> 
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6"> 
+            <!-- Campus Map --> 
+            <div class="bg-blue-50 border border-gray-200 rounded-xl shadow-md overflow-hidden"> 
+                <!-- Header --> 
+                <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-white"> 
+                    <h3 class="text-base font-semibold text-gray-800">Mandalay Technological University Campus</h3> 
+                    <div class="flex gap-2"> 
+                        <button class="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm rounded transition">Evacuation Routes</button> 
+                        <button class="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 text-sm rounded transition">Personnel</button> 
+                    </div> 
+                </div> 
+ 
+                <!-- Map Container --> 
+                <div class="h-96 relative"> 
+                    <!-- Alert Overlay Legend --> 
+                    <div class="absolute top-4 left-4 bg-white p-2 rounded-lg shadow-md z-10"> 
+                        <h4 class="font-semibold text-sm">Alert Locations</h4> 
+                        <div class="flex items-center mt-1"> 
+                            <div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div> 
+                            <span class="text-xs">Active Threat</span> 
+                        </div> 
+                        <div class="flex items-center mt-1"> 
+                            <div class="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div> 
+                            <span class="text-xs">Suspicious Activity</span> 
+                        </div> 
+                    </div> 
+                     
+                    <!-- Google Maps Embed --> 
+                    <iframe  
+                        src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3700.18602282297!2d96.18379031442885!3d21.97241158547319!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x30cb6e538bf6418b%3A0x9c9718b6ec4e04f8!2sMandalay%20Technological%20University!5e0!3m2!1sen!2smm!4v1662537305032!5m2!1sen!2smm"  
+                        width="100%"  
+                        height="100%"  
+                        style="border:0;"  
+                        allowfullscreen=""  
+                        loading="lazy"  
+                        referrerpolicy="no-referrer-when-downgrade" 
+                        class="rounded-b-xl"> 
+                    </iframe> 
+                     
+                    <!-- Alert Marker Example --> 
+                    <div class="absolute top-1/3 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10"> 
+                        <span class="flex h-4 w-4"> 
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span> 
+                            <span class="relative inline-flex rounded-full h-4 w-4 bg-red-600"></span> 
+                        </span> 
+                    </div> 
+                </div> 
+            </div> 
+                    
+            
+            <!-- Threat Detection Statistics -->
+<div class="bg-blue-50 border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+    <div class="p-4 border-b border-gray-200">
+        <h3 class="text-sm font-semibold text-gray-700">Threat Detection Statistics</h3>
+    </div>
+    <div class="grid grid-cols-2 gap-4 p-4" id="threatStatsContainer">
+        <!-- Stats will be dynamically populated here -->
+        <div class="text-center p-4 border border-gray-200 bg-blue-50 rounded-lg shadow-sm">
+            <div class="text-2xl font-bold text-red-600" id="weaponsCount">0</div>
+            <div class="text-xs text-gray-500 mt-1">Weapons Detected</div>
+            <div class="h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
+                <div class="h-full bg-red-600 rounded-full" id="weaponsBar" style="width: 0%"></div>
+            </div>
+        </div>
+        <div class="text-center p-4 border border-gray-200 bg-blue-50 rounded-lg shadow-sm">
+            <div class="text-2xl font-bold text-orange-500" id="violenceCount">0</div>
+            <div class="text-xs text-gray-500 mt-1">Violence Alerts</div>
+            <div class="h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
+                <div class="h-full bg-orange-500 rounded-full" id="violenceBar" style="width: 0%"></div>
+            </div>
+        </div>
+        <div class="text-center p-4 border border-gray-200 bg-blue-50 rounded-lg shadow-sm">
+            <div class="text-2xl font-bold text-purple-600" id="restrictedCount">0</div>
+            <div class="text-xs text-gray-500 mt-1">Restricted Area</div>
+            <div class="h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
+                <div class="h-full bg-purple-600 rounded-full" id="restrictedBar" style="width: 0%"></div>
+            </div>
+        </div>
+        <div class="text-center p-4 border border-gray-200 bg-blue-50 rounded-lg shadow-sm">
+            <div class="text-2xl font-bold text-cyan-600" id="suspiciousCount">0</div>
+            <div class="text-xs text-gray-500 mt-1">Suspicious Activity</div>
+            <div class="h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
+                <div class="h-full bg-cyan-600 rounded-full" id="suspiciousBar" style="width: 0%"></div>
+            </div>
+        </div>
+        <div class="text-center p-4 border border-gray-200 bg-blue-50 rounded-lg shadow-sm">
+            <div class="text-2xl font-bold text-green-600" id="fireCount">0</div>
+            <div class="text-xs text-gray-500 mt-1">Fire Detection</div>
+            <div class="h-2 bg-gray-200 rounded-full mt-2 overflow-hidden">
+                <div class="h-full bg-green-600 rounded-full" id="fireBar" style="width: 0%"></div>
+            </div>
+        </div>
+    </div>
+</div>
+        </section>
+
+      <!-- Camera Grid Section -->
+<section class="bg-blue-50 border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+    <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+        <h3 class="text-sm font-semibold text-gray-700">Campus Camera Grid</h3>
+        <div class="flex gap-2">
+            <button class="px-3 py-1 bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm rounded" onclick="refreshCameraFeeds()">
+                <i class="fas fa-sync-alt mr-1"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <div class="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <!-- Security Webcam -->
+        <div id="camera-grid" class="border rounded-lg overflow-hidden camera-card relative">
+            <div class="bg-gray-800 text-white p-2 text-sm flex justify-between items-center">
+                <span>Security Webcam</span>
+                <span class="w-2 h-2 rounded-full bg-gray-500" id="webcamStatus"></span>
+            </div>
+            <div class="w-full h-48 bg-gray-200 flex items-center justify-center relative">
+                <img id="webcamFeed" src="" class="w-full h-full object-cover hidden">
+                <div id="webcamPlaceholder" class="text-gray-500">Camera not started</div>
+            </div>
+            <div class="p-2 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+                <span class="text-xs" id="webcamThreatStatus">Camera offline</span>
+                <div class="flex gap-1">
+                    <button id="webcamStartBtn" class="px-2 py-1 bg-blue-600 text-white rounded text-xs" 
+                            onclick="startCameraGeneric('webcam', '/video_feed/')">Start</button>
+                    <button id="webcamStopBtn" class="px-2 py-1 bg-red-600 text-white rounded text-xs" 
+                            onclick="stopCameraGeneric('webcam')" disabled>Stop</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Restricted area Camera -->
+        <div class="border rounded-lg overflow-hidden camera-card relative">
+            <div class="bg-gray-800 text-white p-2 text-sm flex justify-between items-center">
+                <span>Restricted Area</span>
+                <span class="w-2 h-2 rounded-full bg-gray-500" id="scienceStatus"></span>
+            </div>
+            <div class="w-full h-48 bg-gray-200 flex items-center justify-center relative">
+                <img id="scienceFeed" src="" class="w-full h-full object-cover hidden">
+                <div id="sciencePlaceholder" class="text-gray-500">Camera not started</div>
+            </div>
+            <div class="p-2 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+                <span class="text-xs" id="scienceThreatStatus">Camera offline</span>
+                <div class="flex gap-1">
+                    <button id="scienceStartBtn" class="px-2 py-1 bg-blue-600 text-white rounded text-xs" 
+                            onclick="startCameraGeneric('science', '/video_feed_science/')">Start</button>
+                    <button id="scienceStopBtn" class="px-2 py-1 bg-red-600 text-white rounded text-xs" 
+                            onclick="stopCameraGeneric('science')" disabled>Stop</button>
+                </div>
+            </div>
+        </div>
+
+        <!--Violence Camera -->
+        <div class="border rounded-lg overflow-hidden camera-card relative">
+            <div class="bg-gray-800 text-white p-2 text-sm flex justify-between items-center">
+                <span>Canteen</span>
+                <span class="w-2 h-2 rounded-full bg-gray-500" id="canteenStatus"></span>
+            </div>
+            <div class="w-full h-48 bg-gray-200 flex items-center justify-center relative">
+                <img id="canteenFeed" src="" class="w-full h-full object-cover hidden">
+                <div id="canteenPlaceholder" class="text-gray-500">Camera not started</div>
+            </div>
+            <div class="p-2 bg-gray-50 border-t border-gray-200 flex justify-between items-center">
+                <span class="text-xs" id="canteenThreatStatus">Camera offline</span>
+                <div class="flex gap-1">
+                    <button id="canteenStartBtn" class="px-2 py-1 bg-blue-600 text-white rounded text-xs" 
+                            onclick="startCameraGeneric('canteen', '/video_feed_canteen/')">Start</button>
+                    <button id="canteenStopBtn" class="px-2 py-1 bg-red-600 text-white rounded text-xs" 
+                            onclick="stopCameraGeneric('canteen')" disabled>Stop</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+         <!-- Live Camera Feed + Active Alerts -->
+          <live class="flex-1 grid gap-6">
+            <!-- Video Upload and Analysis Section -->
+            <section id="video-analysis" class="bg-blue-50 rounded-xl shadow-sm dark:bg-gray-700 overflow-hidden">
+                <div class="p-4 border-b flex justify-between items-center dark:border-gray-600">
+                    <h2 class="font-semibold text-lg dark:text-white">Video Threat Analysis</h2>
+                    <div class="flex gap-2">
+                        <button class="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 dark:bg-gray-600 dark:hover:bg-gray-500">
+                            <i class="fas fa-history mr-1"></i> Recent Files
+                        </button>
+                        <button class="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
+                            <i class="fas fa-play mr-1"></i> Live Scan
+                        </button>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center dark:border-gray-600">
+                        <input type="file" id="videoUpload" accept="video/*" class="hidden">
+                        <label for="videoUpload" class="cursor-pointer">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-2"></i>
+                            <p class="text-gray-600 dark:text-gray-300">Drag & drop security footage or click to browse</p>
+                            <p class="text-sm text-gray-500 mt-1">Supports MP4, MOV, AVI (max 500MB)</p>
+                        </label>
+                    </div>
+                    
+                    <!-- Video Player with AI Detection Overlay -->
+                    <div id="videoContainer" class="mt-4 bg-black rounded-lg overflow-hidden relative">
+                        <img id="analysisGif" style="display: none;" class="w-full">
+                        <div id="videoPlaceholder" class="h-64 flex items-center justify-center text-gray-400">
+                            <div class="text-center">
+                                <i class="fas fa-video text-4xl mb-2"></i>
+                                <p>No video selected</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Simulated AI Detection Boxes -->
+                        <div id="detectionBoxes"></div>
+                    </div>
+                    
+                    <div class="mt-4 grid grid-cols-2 gap-4">
+                        <div class="bg-slate-300 p-3 rounded-lg dark:bg-gray-600">
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm font-medium dark:text-gray-300">AI Model</span>
+                                <span class="text-xs px-2 py-1 bg-green-100 text-green-800 rounded dark:bg-green-900 dark:text-green-200">ViT-B/32</span>
+                            </div>
+                            <div class="mt-2 text-2xl font-bold dark:text-white">66-73%</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Accuracy</div>
+                        </div>
+                        <div class="bg-slate-300 p-3 rounded-lg dark:bg-gray-600">
+                            <div class="text-sm font-medium dark:text-gray-300">Processing Time</div>
+                            <div class="mt-2 text-2xl font-bold dark:text-white">0.4s</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">Per frame</div>
+                        </div>
+                        {% comment %} <div class="bg-slate-300 p-3 rounded-lg dark:bg-gray-600">
+                            <div class="text-sm font-medium dark:text-gray-300">Threats Detected</div>
+                            <div class="mt-2 text-2xl font-bold text-red-600 dark:text-red-400">3</div>
+                            <div class="text-xs text-gray-500 dark:text-gray-400">In this video</div>
+                        </div> {% endcomment %}
+                    </div>
+                </div>
+            </section>
+
+            {% comment %} <!-- Active Alerts -->
+            <div class="bg-blue-50 border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                    <h3 class="text-sm font-semibold text-gray-700">Active Alerts</h3>
+                    <select class="border border-gray-300 rounded px-3 py-1 text-sm bg-gray-50" id="alertFilter">
+                        <option value="all">All</option>
+                        <option value="weapon">Weapon</option>
+                        <option value="fire">Fire</option>
+                        <option value="intrusion">Intrusion</option>
+                        <option value="violence">Violence</option>
+                        <option value="kinapping">Kinapping</option>
+                        <option value="panic_button">Panic Button</option>
+                        <option value="medical">Medical</option>
+                    </select>
+                </div>
+
+                <div class="p-4 h-[360px] overflow-y-auto space-y-3">
+                    <!-- Alert Item 1 -->
+                    <div class="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl bg-red-50 p-3 border border-red-200">
+                        <div class="p-2 rounded-xl alert-high">
+                            <i class="fa-solid fa-triangle-exclamation text-red-500 text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 text-sm font-medium capitalize">
+                                <span class="px-2 py-0.5 rounded-full text-xs bg-red-600 text-white">
+                                    high
+                                </span>
+                                <span>restricted area</span>
+                            </div>
+                            <div class="text-xs text-gray-500">Science Wing • Camera 2 • Aug 15, 2023 12:18</div>
+                            <div class="text-xs flex items-center mt-1">
+                                <span>Confidence: 92%</span>
+                                <span class="mx-2">•</span>
+                                <span>Duration: 5m 23s</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="px-2 py-1 text-black rounded text-sm bg-gray-200 hover:bg-gray-300">View</button>
+                            <button class="px-2 py-1 rounded text-white bg-red-500 hover:bg-red-600">Locate</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Alert Item 2 -->
+                    <div class="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl bg-yellow-50 p-3 border border-yellow-200">
+                        <div class="p-2 rounded-xl alert-medium">
+                            <i class="fa-solid fa-triangle-exclamation text-yellow-500 text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 text-sm font-medium capitalize">
+                                <span class="px-2 py-0.5 rounded-full text-xs bg-yellow-500 text-white">
+                                    medium
+                                </span>
+                                <span>violent behavior</span>
+                            </div>
+                            <div class="text-xs text-gray-500">Canteen • Camera 3 • Aug 15, 2023 13:45</div>
+                            <div class="text-xs flex items-center mt-1">
+                                <span>Confidence: 78%</span>
+                                <span class="mx-2">•</span>
+                                <span>Duration: 2m 15s</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="px-2 py-1 text-black rounded text-sm bg-gray-200 hover:bg-gray-300">View</button>
+                            <button class="px-2 py-1 rounded text-white bg-red-500 hover:bg-red-600">Locate</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Alert Item 3 -->
+                    <div class="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl bg-green-50 p-3 border border-green-200">
+                        <div class="p-2 rounded-xl alert-low">
+                            <i class="fa-solid fa-triangle-exclamation text-green-500 text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 text-sm font-medium capitalize">
+                                <span class="px-2 py-0.5 rounded-full text-xs bg-green-600 text-white">
+                                    low
+                                </span>
+                                <span>weapon detected</span>
+                            </div>
+                            <div class="text-xs text-gray-500">Main Entrance • Camera 1 • Aug 15, 2023 14:32</div>
+                            <div class="text-xs flex items-center mt-1">
+                                <span>Confidence: 65%</span>
+                                <span class="mx-2">•</span>
+                                <span>Duration: 1m 42s</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="px-2 py-1 text-black rounded text-sm bg-gray-200 hover:bg-gray-300">View</button>
+                            <button class="px-2 py-1 rounded text-white bg-red-500 hover:bg-red-600">Locate</button>
+                        </div>
+                    </div>
+
+                    <!-- Alert Item 4 -->
+                    <div class="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl bg-purple-50 p-3 border border-purple-200">
+                        <div class="p-2 rounded-xl">
+                            <i class="fa-solid fa-bell text-purple-500 text-xl"></i>
+                        </div>
+                        <div>
+                            <div class="flex items-center gap-2 text-sm font-medium capitalize">
+                                <span class="px-2 py-0.5 rounded-full text-xs bg-purple-600 text-white">
+                                    panic
+                                </span>
+                                <span>Panic Button Activated</span>
+                            </div>
+                            <div class="text-xs text-gray-500">Admin Building • Room 205 • Aug 15, 2023 15:15</div>
+                            <div class="text-xs flex items-center mt-1">
+                                <span>Staff: John Smith</span>
+                                <span class="mx-2">•</span>
+                                <span>Duration: 8m 12s</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button class="px-2 py-1 text-black rounded text-sm bg-gray-200 hover:bg-gray-300">View</button>
+                            <button class="px-2 py-1 rounded text-white bg-red-500 hover:bg-red-600">Dispatch</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+
+
+<!-- Alarm and Email Configuration -->
+<section class="bg-blue-100 border border-gray-200 rounded-xl shadow-sm overflow-hidden mt-6">
+    <div class="p-4 border-b border-gray-300">
+        <h3 class="text-sm font-semibold text-gray-700">Alarm & Email Configuration</h3>
+    </div>
+    <div class="bg-blue-50 p-4 space-y-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h4 class="font-medium">Alarm Sound</h4>
+                <p class="text-xs text-gray-500">Play sound when threats are detected</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="alarmToggle" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-blue-50 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+        </div>
+        
+        <div class="flex items-center justify-between">
+            <div>
+                <h4 class="font-medium">Email Alerts</h4>
+                <p class="text-xs text-gray-500">Send email notifications for threats</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" id="emailToggle" class="sr-only peer" checked>
+                <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-blue-50 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+        </div>
+        
+        <div class="mt-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Notification Email</label>
+            <input type="email" id="notificationEmail" value="phooiechennie@gmail.com" 
+                   class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+        </div>
+        
+        <div class="flex gap-2 mt-4">
+            <button class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition" 
+                    onclick="updateEmailSettings()">
+                Save Settings
+            </button>
+            <button class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition" 
+                    onclick="testAlarm()">
+                Test Alarm
+            </button>
+        </div>
+    </div>
+</section>
+
+<!-- Alert Configuration Panel -->
+        <main class="flex-1 grid gap-2">
+        <section class="bg-blue-100 border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+            <div class="p-4 border-b border-gray-300">
+                <h3 class="text-sm font-semibold text-gray-700">Alert Configuration</h3>
+            </div>
+            <div class="bg-blue-50 p-4 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h4 class="font-medium">Weapon Detection</h4>
+                        <p class="text-xs text-gray-500">Trigger alerts when weapons are detected</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" value="" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-blue-50 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h4 class="font-medium">Violence Detection</h4>
+                        <p class="text-xs text-gray-500">Trigger alerts for aggressive actions</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" value="" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-blue-50 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h4 class="font-medium">Email Notifications</h4>
+                        <p class="text-xs text-gray-500">Send alerts to registered emails</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" value="" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-blue-50 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <!-- Incident History -->
+        <section class="grid grid-cols-1 gap-4">
+            <div class="bg-cyan-50 border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                    <h3 class="text-sm font-semibold">Incident History (last 200)</h3>
+                    <div class="flex gap-2">
+                        <select class="border border-gray-300 rounded px-3 py-1 text-sm bg-gray-50">
+                            <option>Last 24 hours</option>
+                            <option>Last 7 days</option>
+                            <option>Last 30 days</option>
+                            <option>Custom range</option>
+                        </select>
+                        <button class="px-3 py-1 bg-blue-500 text-white hover:bg-gray-300 text-sm rounded">Export</button>
+                    </div>
+                </div>
+                <div class="p-4 h-[360px] overflow-y-auto bg-blue-50">
+                    <table class="min-w-full text-sm">
+                        <thead class="text-left text-gray-500">
+                            <tr>
+                                <th class="py-2 pr-4">Type</th>
+                                <th class="py-2 pr-4">Severity</th>
+                                <th class="py-2 pr-4">Location</th>
+                                <th class="py-2 pr-4">Camera</th>
+                                <th class="py-2 pr-4">Confidence</th>
+                                <th class="py-2 pr-4">Time</th>
+                                <th class="py-2 pr-4">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Incident 1 -->
+                            <tr class="border-t border-gray-200">
+                                <td class="py-2 pr-4 capitalize">restricted area</td>
+                                <td class="py-2 pr-4">
+                                    <span class="px-2 py-0.5 rounded-full text-xs bg-red-600 text-white">
+                                        high
+                                    </span>
+                                </td>
+                                <td class="py-2 pr-4">Science Wing</td>
+                                <td class="py-2 pr-4">Camera 1</td>
+                                <td class="py-2 pr-4">92%</td>
+                                <td class="py-2 pr-4">Aug 15, 2023 14:32</td>
+                                <td class="py-2 pr-4">
+                                    <button class="text-blue-500 hover:text-blue-700 text-xs">View</button>
+                                </td>
+                            </tr>
+                            <!-- Incident 2 -->
+                            <tr class="border-t border-gray-200">
+                                <td class="py-2 pr-4 capitalize">violent behavior</td>
+                                <td class="py-2 pr-4">
+                                    <span class="px-2 py-0.5 rounded-full text-xs bg-yellow-500 text-white">
+                                        medium
+                                    </span>
+                                </td>
+                                <td class="py-2 pr-4">Canteen</td>
+                                <td class="py-2 pr-4">Camera 3</td>
+                                <td class="py-2 pr-4">78%</td>
+                                <td class="py-2 pr-4">Aug 15, 2023 13:45</td>
+                                <td class="py-2 pr-4">
+                                    <button class="text-blue-500 hover:text-blue-700 text-xs">View</button>
+                                </td>
+                            </tr>
+                            <!-- Incident 3 -->
+                            <tr class="border-t border-gray-200">
+                                <td class="py-2 pr-4 capitalize">weapon detected</td>
+                                <td class="py-2 pr-4">
+                                    <span class="px-2 py-0.5 rounded-full text-xs bg-green-600 text-white">
+                                        low
+                                    </span>
+                                </td>
+                                <td class="py-2 pr-4">Main Entrance</td>
+                                <td class="py-2 pr-4">Camera 2</td>
+                                <td class="py-2 pr-4">65%</td>
+                                <td class="py-2 pr-4">Aug 15, 2023 12:18</td>
+                                <td class="py-2 pr-4">
+                                    <button class="text-blue-500 hover:text-blue-700 text-xs">View</button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section> {% endcomment %}
+
+
+        <!-- Charts Section -->
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="bg-blue-50 border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-gray-200">
+                    <h3 class="text-sm font-semibold text-gray-700">Alerts – Last 24 Hours</h3>
+                </div>
+                <div class="p-4 h-64">
+                    <canvas id="alertsChart"></canvas>
+                </div>
+            </div>
+            <div class="bg-blue-50 border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+                <div class="p-4 border-b border-gray-200">
+                    <h3 class="text-sm font-semibold text-gray-700">Alerts by Type</h3>
+                </div>
+                <div class="p-4 h-64">
+                    <canvas id="typesChart"></canvas>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+
+<!-- Add this to your charts section header -->
+<!-- <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+    <h3 class="text-sm font-semibold text-gray-700">Alerts – Last 24 Hours</h3>
+    <button onclick="initializeCharts()" class="text-gray-500 hover:text-gray-700">
+        <i class="fas fa-sync-alt"></i>
+    </button>
+</div> -->
+
+<!-- Footer -->
+<footer class="py-6 text-center text-center text-sm text-gray-500">
+    © {% now "Y" %} MTU | Campus Safety | Demo Dashboard
+</footer>
+
+<script>
+// ===== GLOBAL VARIABLES =====
+let cameraIntervals = {};
+let alarmEnabled = true;
+let emailAlertsEnabled = true;
+let alertsChartInstance = null;
+let typesChartInstance = null;
+
+// Theme Toggle with Text Labels
+document.addEventListener('DOMContentLoaded', function() {
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = themeToggle.querySelector('i');
+    const themeText = document.getElementById('theme-text');
+    
+    // Check for saved theme or default to light
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    
+    // Apply saved theme and update button
+    applyTheme(savedTheme);
+    
+    // Toggle theme on click
+    themeToggle.addEventListener('click', function() {
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        applyTheme(newTheme);
+    });
+    
+    function applyTheme(theme) {
+        // Set the theme attribute
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+        
+        // Update button appearance based on current theme
+        if (theme === 'dark') {
+            // Currently in dark mode, so button should show "Light Mode"
+            themeIcon.className = 'fa-solid fa-moon text-yellow-400';
+            themeText.textContent = 'Dark Mode';
+            themeToggle.classList.remove('bg-gray-200', 'hover:bg-gray-300');
+            themeToggle.classList.add('bg-gray-700', 'hover:bg-gray-600');
+        } else {
+            // Currently in light mode, so button should show "Dark Mode"
+            themeIcon.className = 'fa-solid fa-moon text-gray-700';
+            themeText.textContent = 'Light Mode';
+            themeToggle.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+            themeToggle.classList.add('bg-gray-200', 'hover:bg-gray-300');
+        }
+    }
+});
+
+
+
+// ===== CHART FUNCTIONS =====
+function initializeCharts() {
+    console.log('Initializing charts...');
+    
+    fetch('/get_chart_data/')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Chart data received:', data);
+            if (data.status === 'success') {
+                createAlertsChart(data.alerts_over_time);
+                createThreatsChart(data.threats_by_type);
+                updateDashboardStats(data);
+            } else {
+                console.error('Error in chart data:', data.message);
+                initializeChartsWithFallback();
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching chart data:', error);
+            initializeChartsWithFallback();
+        });
+}
+
+function createAlertsChart(chartData) {
+    const canvas = document.getElementById('alertsChart');
+    if (!canvas) {
+        console.error('alertsChart canvas element not found');
+        return;
+    }
+    
+    // Destroy existing chart if it exists
+    if (alertsChartInstance) {
+        alertsChartInstance.destroy();
+        alertsChartInstance = null;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    alertsChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: chartData.hours,
+            datasets: [{
+                label: 'Security Alerts',
+                data: chartData.alerts,
+                borderColor: 'rgb(239, 68, 68)',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointBackgroundColor: 'rgb(239, 68, 68)',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    borderColor: 'rgb(239, 68, 68)',
+                    borderWidth: 1
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    },
+                    ticks: {
+                        stepSize: 2
+                    },
+                    title: {
+                        display: true,
+                        text: 'Number of Alerts',
+                        color: '#666'
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Time of Day',
+                        color: '#666'
+                    }
+                }
+            },
+            interaction: {
+                intersect: false,
+                mode: 'nearest'
+            }
+        }
+    });
+}
+
+function createThreatsChart(chartData) {
+    const canvas = document.getElementById('typesChart');
+    if (!canvas) {
+        console.error('typesChart canvas element not found');
+        return;
+    }
+    
+    // Destroy existing chart if it exists
+    if (typesChartInstance) {
+        typesChartInstance.destroy();
+        typesChartInstance = null;
+    }
+    
+    // Define colors for different threat types
+    const colorPalette = [
+        'rgb(239, 68, 68)',    // red - weapons
+        'rgb(234, 179, 8)',    // yellow - violence  
+        'rgb(59, 130, 246)',   // blue - intrusion
+        'rgb(139, 92, 246)',   // purple - restricted area
+        'rgb(14, 165, 233)',   // light blue - suspicious
+        'rgb(249, 115, 22)'    // orange - fire
+    ];
+    
+    const ctx = canvas.getContext('2d');
+    typesChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: chartData.labels,
+            datasets: [{
+                data: chartData.counts,
+                backgroundColor: colorPalette,
+                borderColor: '#fff',
+                borderWidth: 2,
+                hoverOffset: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15,
+                        font: {
+                            size: 11
+                        },
+                        color: '#333'
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = Math.round((value / total) * 100);
+                            return `${label}: ${value} alerts (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            cutout: '60%'
+        }
+    });
+}
+
+function updateDashboardStats(data) {
+    // Update active alerts count
+    const activeAlertsElements = document.querySelectorAll('.bg-blue-50.border .text-2xl.font-semibold');
+    if (activeAlertsElements.length > 0) {
+        activeAlertsElements[0].textContent = data.current_threats_count || 0;
+    }
+    
+    // Update last 24 hours count
+    const last24hElements = document.querySelectorAll('.bg-blue-50.border .text-xs.text-gray-500');
+    last24hElements.forEach(element => {
+        if (element.textContent.includes('Last 24 hours')) {
+            element.textContent = `Last 24 hours: ${data.total_alerts_today || 0}`;
+        }
+    });
+    
+    console.log('Dashboard stats updated:', {
+        current_threats: data.current_threats_count,
+        total_today: data.total_alerts_today
+    });
+}
+
+function initializeChartsWithFallback() {
+    console.log('Using fallback chart data');
+    
+    // Fallback mock data
+    const mockAlertsData = {
+        hours: ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'],
+        alerts: [1, 0, 2, 1, 5, 8, 12, 9, 7, 4, 2, 1]
+    };
+    
+    const mockThreatsData = {
+        labels: ['Weapons', 'Violence', 'Intrusion', 'Restricted Area', 'Suspicious Activity'],
+        counts: [15, 9, 6, 4, 11]
+    };
+    
+    createAlertsChart(mockAlertsData);
+    createThreatsChart(mockThreatsData);
+    
+    // Update stats with mock data
+    updateDashboardStats({
+        current_threats_count: 3,
+        total_alerts_today: 52
+    });
+}
+
+function refreshCharts() {
+    console.log('Refreshing charts...');
+    initializeCharts();
+}
+
+// ===== CAMERA FUNCTIONS =====
+function startCameraGeneric(prefix, feedUrl) {
+    if (cameraIntervals[prefix]) return; // already running
+    
+    const feed = document.getElementById(`${prefix}Feed`);
+    const placeholder = document.getElementById(`${prefix}Placeholder`);
+    const statusLight = document.getElementById(`${prefix}Status`);
+    const startBtn = document.getElementById(`${prefix}StartBtn`);
+    const stopBtn = document.getElementById(`${prefix}StopBtn`);
+    const threatStatus = document.getElementById(`${prefix}ThreatStatus`);
+    
+    placeholder.innerHTML = '<i class="fas fa-spinner fa-spin text-4xl mb-2"></i><p>Starting camera...</p>';
+    statusLight.className = 'w-2 h-2 rounded-full bg-yellow-500';
+    
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    
+    feed.src = feedUrl;
+    feed.onload = function() {
+        feed.classList.remove('hidden');
+        placeholder.style.display = 'none';
+        statusLight.className = 'w-2 h-2 rounded-full bg-green-500';
+        threatStatus.textContent = 'No threats detected';
+        
+        cameraIntervals[prefix] = setInterval(() => checkForThreatsGeneric(prefix), 2000);
+    };
+    
+    feed.onerror = function() {
+        placeholder.innerHTML = '<i class="fas fa-exclamation-triangle text-4xl mb-2 text-red-500"></i><p>Failed to start camera</p>';
+        statusLight.className = 'w-2 h-2 rounded-full bg-red-500';
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+    };
+}
+
+function stopCameraGeneric(prefix) {
+    const feed = document.getElementById(`${prefix}Feed`);
+    const placeholder = document.getElementById(`${prefix}Placeholder`);
+    const statusLight = document.getElementById(`${prefix}Status`);
+    const startBtn = document.getElementById(`${prefix}StartBtn`);
+    const stopBtn = document.getElementById(`${prefix}StopBtn`);
+    const threatStatus = document.getElementById(`${prefix}ThreatStatus`);
+    
+    feed.src = '';
+    feed.classList.add('hidden');
+    placeholder.style.display = 'block';
+    placeholder.innerHTML = 'Camera not started';
+    statusLight.className = 'w-2 h-2 rounded-full bg-gray-500';
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    threatStatus.textContent = 'Camera offline';
+    
+    if (cameraIntervals[prefix]) {
+        clearInterval(cameraIntervals[prefix]);
+        delete cameraIntervals[prefix];
+    }
+}
+
+function checkForThreatsGeneric(prefix) {
+    fetch('/get_threats/')
+        .then(res => res.json())
+        .then(data => {
+            const threatStatus = document.getElementById(`${prefix}ThreatStatus`);
+            if (data.threats && data.threats.length > 0) {
+                threatStatus.textContent = `${data.threats.length} threat(s) detected!`;
+                // Refresh charts when threats are detected
+                refreshCharts();
+            } else {
+                threatStatus.textContent = 'No threats detected';
+            }
+        });
+}
+
+function refreshCameraFeeds() {
+    const webcamFeed = document.getElementById('webcamFeed');
+    webcamFeed.src = '';
+    setTimeout(() => {
+        webcamFeed.src = '/video_feed/';
+        document.getElementById('webcamPlaceholder').textContent = 'Loading webcam...';
+        document.getElementById('webcamPlaceholder').style.display = 'block';
+        webcamFeed.classList.add('hidden');
+    }, 100);
+}
+
+// ===== ALARM & EMAIL FUNCTIONS =====
+function testAlarm() {
+    fetch('/trigger_test_alarm/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showNotification('Test alarm triggered successfully', 'success');
+        } else {
+            showNotification('Error triggering test alarm: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error testing alarm:', error);
+        showNotification('Error testing alarm', 'error');
+    });
+}
+
+function updateEmailSettings() {
+    const email = document.getElementById('notificationEmail').value;
+    const alarmToggle = document.getElementById('alarmToggle').checked;
+    const emailToggle = document.getElementById('emailToggle').checked;
+    
+    // Update local settings
+    alarmEnabled = alarmToggle;
+    emailAlertsEnabled = emailToggle;
+    
+    // Send to server
+    fetch('/update_email_settings/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            mailto: email
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'success') {
+            showNotification('Settings updated successfully', 'success');
+        } else {
+            showNotification('Error updating settings: ' + data.message, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error updating settings:', error);
+        showNotification('Error updating settings', 'error');
+    });
+}
+
+// ===== UTILITY FUNCTIONS =====
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 px-4 py-2 rounded-md shadow-md text-white ${
+        type === 'success' ? 'bg-green-600' : 
+        type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+    } z-50`;
+    notification.textContent = message;
+    
+    // Add to document
+    document.body.appendChild(notification);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function checkForThreats() {
+    fetch('/get_threats/')
+        .then(response => response.json())
+        .then(data => {
+            const threatIndicator = document.getElementById('threatIndicator');
+            const threatStatus = document.getElementById('threatStatus');
+            const threatOverlay = document.getElementById('threatOverlay');
+            
+            if (data.threats && data.threats.length > 0) {
+                // Threats detected
+                threatIndicator.className = 'status-badge bg-red-500 blink';
+                threatStatus.textContent = `THREAT: ${data.threats[0].label} (${Math.round(data.threats[0].confidence * 100)}%)`;
+                threatStatus.className = 'text-xs text-red-600 font-bold';
+                
+                // Create visual alert
+                createThreatAlert(data.threats);
+                
+                // Also add to active alerts
+                addToActiveAlerts(data.threats);
+                
+                // Refresh charts to show new data
+                refreshCharts();
+            } else {
+                // No threats
+                threatIndicator.className = 'status-badge bg-green-500';
+                threatStatus.textContent = 'No threats detected';
+                threatStatus.className = 'text-xs';
+                
+                // Clear any threat overlays
+                threatOverlay.innerHTML = '';
+            }
+        })
+        .catch(error => {
+            console.error('Error checking for threats:', error);
+        });
+}
+
+function createThreatAlert(threats) {
+    const threatOverlay = document.getElementById('threatOverlay');
+    threatOverlay.innerHTML = '';
+    
+    threats.forEach(threat => {
+        const box = document.createElement('div');
+        box.className = 'absolute border-2 border-red-500 bg-red-500 bg-opacity-20';
+        
+        // Random position for demo purposes
+        const left = Math.random() * 70 + 5;
+        const top = Math.random() * 70 + 5;
+        const width = Math.random() * 20 + 10;
+        const height = Math.random() * 20 + 10;
+        
+        box.style.left = `${left}%`;
+        box.style.top = `${top}%`;
+        box.style.width = `${width}%`;
+        box.style.height = `${height}%`;
+        
+        threatOverlay.appendChild(box);
+    });
+}
+
+function addToActiveAlerts(threats) {
+    const alertsContainer = document.querySelector('.p-4.h-[360px].overflow-y-auto.space-y-3');
+    
+    threats.forEach(threat => {
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl bg-red-50 p-3 border border-red-200';
+        
+        alertDiv.innerHTML = `
+            <div class="p-2 rounded-xl alert-high">
+                <i class="fa-solid fa-triangle-exclamation text-red-500 text-xl"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2 text-sm font-medium capitalize">
+                    <span class="px-2 py-0.5 rounded-full text-xs bg-red-600 text-white">
+                        high
+                    </span>
+                    <span>${threat.label}</span>
+                </div>
+                <div class="text-xs text-gray-500">Security Webcam • ${new Date().toLocaleString()}</div>
+                <div class="text-xs flex items-center mt-1">
+                    <span>Confidence: ${Math.round(threat.confidence * 100)}%</span>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="px-2 py-1 text-black rounded text-sm bg-gray-200 hover:bg-gray-300">View</button>
+                <button class="px-2 py-1 rounded text-white bg-red-500 hover:bg-red-600">Locate</button>
+            </div>
+        `;
+        
+        // Add to the top of alerts
+        if (alertsContainer.firstChild) {
+            alertsContainer.insertBefore(alertDiv, alertsContainer.firstChild);
+        } else {
+            alertsContainer.appendChild(alertDiv);
+        }
+    });
+}
+
+function toggleFullscreen(elementId) {
+    const element = document.getElementById(elementId);
+    
+    if (!document.fullscreenElement) {
+        if (element.requestFullscreen) {
+            element.requestFullscreen();
+        } else if (element.webkitRequestFullscreen) {
+            element.webkitRequestFullscreen();
+        } else if (element.msRequestFullscreen) {
+            element.msRequestFullscreen();
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+    }
+}
+
+function playBrowserAlert() {
+    try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        const audioContext = new AudioContext();
+        
+        const oscillator = audioContext.createOscillator();
+        oscillator.type = 'sawtooth';
+        oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+        
+        const gainNode = audioContext.createGain();
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.start();
+        
+        setTimeout(() => {
+            oscillator.stop();
+        }, 500);
+    } catch (e) {
+        console.error('Could not play browser alert sound:', e);
+    }
+}
+
+// ===== VIDEO UPLOAD FUNCTIONS =====
+function loadRecentVideos() {
+    fetch('/get_recent_videos/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                displayRecentVideos(data.videos);
+            } else {
+                showNotification('Error loading recent videos', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error loading recent videos:', error);
+            showNotification('Error loading recent videos', 'error');
+        });
+}
+
+function displayRecentVideos(videos) {
+    // Create modal container
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    modal.innerHTML = `
+        <div class="bg-white rounded-lg shadow-xl w-11/12 md:w-3/4 lg:w-2/3 max-h-screen overflow-y-auto">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+                <h3 class="text-lg font-semibold">Recent Video Files</h3>
+                <button onclick="this.closest('.fixed').remove()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="p-4">
+                ${videos.length > 0 ? 
+                    `<div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="recentVideosGrid">
+                        ${videos.map(video => `
+                            <div class="border rounded-lg overflow-hidden cursor-pointer hover:shadow-md transition" 
+                                 onclick="loadVideoForAnalysis(${video.id})">
+                                <div class="bg-gray-800 text-white p-2 text-sm">
+                                    ${video.name}
+                                </div>
+                                <div class="p-3">
+                                    <div class="text-sm text-gray-600 mb-1">Uploaded: ${formatDate(video.uploaded_at)}</div>
+                                    <div class="text-sm ${video.threat_count > 0 ? 'text-red-600' : 'text-green-600'}">
+                                        
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>` : 
+                    '<p class="text-center text-gray-500 py-4">No recent videos found.</p>'
+                }
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+}
+
+function loadVideoForAnalysis(videoId) {
+    // Close the modal first
+    document.querySelector('.fixed.inset-0').remove();
+    
+    // Show loading state
+    const videoPlaceholder = document.getElementById('videoPlaceholder');
+    videoPlaceholder.innerHTML = '<i class="fas fa-spinner fa-spin text-4xl mb-2"></i><p>Loading video...</p>';
+    videoPlaceholder.style.display = 'flex';
+    
+    // Fetch the specific video
+    fetch(`/get_video/${videoId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                // Hide placeholder and show the video
+                videoPlaceholder.style.display = 'none';
+                
+                // Create video element
+                const videoContainer = document.getElementById('videoContainer');
+                const existingVideo = document.getElementById('analysisVideo');
+                if (existingVideo) {
+                    existingVideo.remove();
+                }
+                
+                const videoElement = document.createElement('video');
+                videoElement.id = 'analysisVideo';
+                videoElement.className = 'w-full h-auto';
+                videoElement.controls = true;
+                videoElement.src = data.video.processed_video_url || data.video.original_video_url;
+                
+                // Clear any previous detection boxes
+                const detectionBoxes = document.getElementById('detectionBoxes');
+                detectionBoxes.innerHTML = '';
+                
+                // Add video to container
+                videoContainer.appendChild(videoElement);
+                
+                // Update stats
+                document.querySelector('.text-2xl.font-bold.text-red-600').textContent = data.video.threat_count;
+                
+                // Add to incident history if there are threats
+                if (data.video.threat_count > 0) {
+                    addToIncidentHistory({
+                        type: 'Threat Detected',
+                        severity: data.video.threat_count > 0 ? 'high' : 'low',
+                        location: 'Uploaded Video',
+                        camera: data.video.name,
+                        confidence: 92,
+                        time: data.video.uploaded_at,
+                        threats: data.video.threat_count
+                    });
+                }
+            } else {
+                videoPlaceholder.innerHTML = `
+                    <i class="fas fa-exclamation-triangle text-4xl mb-2 text-red-500"></i>
+                    <p>Error: ${data.message}</p>
+                `;
+            }
+        })
+        .catch(error => {
+            videoPlaceholder.innerHTML = `
+                <i class="fas fa-exclamation-triangle text-4xl mb-2 text-red-500"></i>
+                <p>Error loading video</p>
+            `;
+            console.error('Error:', error);
+        });
+}
+
+function addToIncidentHistory(incident) {
+    const table = document.querySelector('.min-w-full.text-sm tbody');
+    const newRow = document.createElement('tr');
+    newRow.className = 'border-t border-gray-200';
+    
+    const severityClass = incident.severity === 'high' ? 'bg-red-600' : 
+                       incident.severity === 'medium' ? 'bg-yellow-500' : 'bg-green-600';
+    
+    newRow.innerHTML = `
+        <td class="py-2 pr-4 capitalize">${incident.type}</td>
+        <td class="py-2 pr-4">
+            <span class="px-2 py-0.5 rounded-full text-xs ${severityClass} text-white">
+                ${incident.severity}
+            </span>
+        </td>
+        <td class="py-2 pr-4">${incident.location}</td>
+        <td class="py-2 pr-4">${incident.camera}</td>
+        <td class="py-2 pr-4">${incident.confidence}%</td>
+        <td class="py-2 pr-4">${incident.time}</td>
+        <td class="py-2 pr-4">
+            <button class="text-blue-500 hover:text-blue-700 text-xs">View</button>
+        </td>
+    `;
+    
+    // Add to the top of the table
+    if (table.firstChild) {
+        table.insertBefore(newRow, table.firstChild);
+    } else {
+        table.appendChild(newRow);
+    }
+    
+    // Update active alerts if threats were detected
+    if (incident.threats > 0) {
+        updateActiveAlerts(incident);
+    }
+}
+
+function updateActiveAlerts(incident) {
+    const alertsContainer = document.querySelector('.p-4.h-[360px].overflow-y-auto.space-y-3');
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-2xl bg-red-50 p-3 border border-red-200';
+    
+    alertDiv.innerHTML = `
+        <div class="p-2 rounded-xl alert-high">
+            <i class="fa-solid fa-triangle-exclamation text-red-500 text-xl"></i>
+        </div>
+        <div>
+            <div class="flex items-center gap-2 text-sm font-medium capitalize">
+                <span class="px-2 py-0.5 rounded-full text-xs bg-red-600 text-white">
+                    high
+                </span>
+                <span>${incident.type}</span>
+            </div>
+            <div class="text-xs text-gray-500">${incident.location} • ${incident.camera} • ${incident.time}</div>
+            <div class="text-xs flex items-center mt-1">
+                <span>Confidence: ${incident.confidence}%</span>
+                <span class="mx-2">•</span>
+                <span>Threats: ${incident.threats}</span>
+            </div>
+        </div>
+        <div class="flex items-center gap-2">
+            <button class="px-2 py-1 text-black rounded text-sm bg-gray-200 hover:bg-gray-300">View</button>
+            <button class="px-2 py-1 rounded text-white bg-red-500 hover:bg-red-600">Locate</button>
+        </div>
+    `;
+    
+    // Add to the top of alerts
+    if (alertsContainer.firstChild) {
+        alertsContainer.insertBefore(alertDiv, alertsContainer.firstChild);
+    } else {
+        alertsContainer.appendChild(alertDiv);
+    }
+}
+
+// ===== INITIALIZATION =====
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing charts...');
+    
+    // Initialize charts after a short delay to ensure DOM is ready
+    setTimeout(() => {
+        initializeCharts();
+    }, 1000);
+    
+    // Start auto-refresh every 2 minutes
+    setInterval(() => {
+        refreshCharts();
+    }, 120000);
+    
+    // Your existing toggle event listeners...
+    const alarmToggle = document.getElementById('alarmToggle');
+    const emailToggle = document.getElementById('emailToggle');
+    
+    if (alarmToggle) {
+        alarmToggle.addEventListener('change', function() {
+            alarmEnabled = this.checked;
+        });
+    }
+    
+    if (emailToggle) {
+        emailToggle.addEventListener('change', function() {
+            emailAlertsEnabled = this.checked;
+        });
+    }
+    
+    // Add refresh buttons to charts
+    addRefreshButtons();
+    
+    // Add event listener to the Recent Files button
+    const recentFilesBtn = document.querySelector('button:has(i.fa-history)');
+    if (recentFilesBtn) {
+        recentFilesBtn.addEventListener('click', loadRecentVideos);
+    }
+});
+
+function addRefreshButtons() {
+    // Add refresh button to charts section headers
+    const chartHeaders = document.querySelectorAll('.bg-blue-50.border .p-4.border-b');
+    chartHeaders.forEach(header => {
+        const h3 = header.querySelector('h3');
+        if (h3 && (h3.textContent.includes('Alerts – Last 24 Hours') || 
+            h3.textContent.includes('Alerts by Type'))) {
+            
+            // Check if button already exists
+            if (!header.querySelector('.refresh-charts-btn')) {
+                const refreshButton = document.createElement('button');
+                refreshButton.innerHTML = '<i class="fas fa-sync-alt mr-1"></i> Refresh';
+                refreshButton.className = 'refresh-charts-btn px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition';
+                refreshButton.onclick = refreshCharts;
+                header.style.display = 'flex';
+                header.style.justifyContent = 'space-between';
+                header.style.alignItems = 'center';
+                header.appendChild(refreshButton);
+            }
+        }
+    });
+}
+
+// Video upload handling
+document.addEventListener("DOMContentLoaded", function() {
+    const videoUpload = document.getElementById('videoUpload');
+    const gifElement = document.getElementById('analysisGif');
+    const videoPlaceholder = document.getElementById('videoPlaceholder');
+    
+    if (videoUpload) {
+        videoUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Show loading state
+            videoPlaceholder.innerHTML = '<i class="fas fa-spinner fa-spin text-4xl mb-2"></i><p>Processing video...</p>';
+            
+            const formData = new FormData();
+            formData.append('video', file);
+            
+            fetch('/analyze_video/', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Update GIF element with processed GIF
+                    videoPlaceholder.style.display = 'none';
+                    gifElement.style.display = 'block';
+                    gifElement.src = data.video_url;
+                    
+                    // Update stats
+                    document.querySelector('.text-2xl.font-bold.text-red-600').textContent = data.threats;
+                    document.querySelector('.bg-slate-300.p-3.rounded-lg.dark\\:bg-gray-600 div:nth-child(2)').textContent = data.processing_time;
+                    
+                    // Add to incident history
+                    addToIncidentHistory({
+                        type: 'Threat Detected',
+                        severity: data.threats > 0 ? 'high' : 'low',
+                        location: 'Uploaded Video',
+                        camera: 'User Upload',
+                        confidence: 92,
+                        time: new Date().toLocaleString(),
+                        threats: data.threats
+                    });
+                    
+                    // Refresh charts
+                    refreshCharts();
+                } else {
+                    videoPlaceholder.innerHTML = `
+                        <i class="fas fa-exclamation-triangle text-4xl mb-2 text-red-500"></i>
+                        <p>Error: ${data.message}</p>
+                    `;
+                }
+            })
+            .catch(error => {
+                videoPlaceholder.innerHTML = `
+                    <i class="fas fa-exclamation-triangle text-4xl mb-2 text-red-500"></i>
+                    <p>Error processing video</p>
+                `;
+                console.error('Error:', error);
+            });
+        });
+    }
+});
+
+// ===== THREAT STATISTICS FUNCTIONS =====
+function updateThreatStatistics(threatsData) {
+    console.log('Updating threat statistics with:', threatsData);
+    
+    // Reset all counters
+    const threatTypes = {
+        'Weapons': { element: 'weaponsCount', bar: 'weaponsBar', count: 0 },
+        'Violence': { element: 'violenceCount', bar: 'violenceBar', count: 0 },
+        'Restricted Area': { element: 'restrictedCount', bar: 'restrictedBar', count: 0 },
+        'Suspicious Activity': { element: 'suspiciousCount', bar: 'suspiciousBar', count: 0 },
+        'Fire': { element: 'fireCount', bar: 'fireBar', count: 0 },
+        'Person Detection': { element: 'personCount', bar: 'personBar', count: 0 }
+    };
+    
+    // Map the data from the chart to our threat types
+    if (threatsData && threatsData.labels && threatsData.counts) {
+        threatsData.labels.forEach((label, index) => {
+            const count = threatsData.counts[index];
+            
+            // Handle different label variations
+            if (label.includes('Weapon') || label === 'Weapons') {
+                threatTypes['Weapons'].count += count;
+            } else if (label.includes('Violence') || label === 'Violence') {
+                threatTypes['Violence'].count += count;
+            } else if (label.includes('Intrusion') || label === 'Intrusion') {
+                threatTypes['Intrusion'].count += count;
+            } else if (label.includes('Restricted') || label === 'Restricted Area') {
+                threatTypes['Restricted Area'].count += count;
+            } else if (label.includes('Suspicious') || label === 'Suspicious Activity') {
+                threatTypes['Suspicious Activity'].count += count;
+            } else if (label.includes('Fire') || label === 'Fire') {
+                threatTypes['Fire'].count += count;
+            } else if (label.includes('Person') || label === 'Person Detection') {
+                threatTypes['Person Detection'].count += count;
+            }
+        });
+    }
+    
+    // Calculate total for percentage calculations
+    const totalThreats = Object.values(threatTypes).reduce((sum, type) => sum + type.count, 0);
+    
+    // Update the UI for each threat type
+    Object.entries(threatTypes).forEach(([threatName, threatData]) => {
+        const countElement = document.getElementById(threatData.element);
+        const barElement = document.getElementById(threatData.bar);
+        
+        if (countElement) {
+            countElement.textContent = threatData.count;
+            
+            // Calculate percentage for bar width (max 100%)
+            const percentage = totalThreats > 0 ? Math.min(100, (threatData.count / totalThreats) * 100) : 0;
+            
+            if (barElement) {
+                barElement.style.width = `${percentage}%`;
+            }
+            
+            // Add animation for new threats
+            if (threatData.count > 0) {
+                countElement.classList.add('animate-pulse');
+                setTimeout(() => {
+                    countElement.classList.remove('animate-pulse');
+                }, 1000);
+            }
+        }
+    });
+    
+    // Update the total alerts today in the header if available
+    const totalAlertsElement = document.querySelector('.bg-blue-50.border .text-2xl.font-semibold');
+    if (totalAlertsElement && totalThreats > 0) {
+        totalAlertsElement.textContent = totalThreats;
+    }
+    
+    console.log('Threat statistics updated. Total threats:', totalThreats);
+}
+
+function createThreatStatsChart(threatsData) {
+    // This function creates a visual representation of threat statistics
+    const container = document.getElementById('threatStatsContainer');
+    if (!container) return;
+    
+    // Clear any existing custom charts
+    const existingChart = document.getElementById('threatStatsChart');
+    if (existingChart) {
+        existingChart.remove();
+    }
+}
+
+// Update the initializeCharts function to include threat statistics
+function initializeCharts() {
+    console.log('Initializing charts...');
+    
+    fetch('/get_chart_data/')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('Chart data received:', data);
+            if (data.status === 'success') {
+                createAlertsChart(data.alerts_over_time);
+                createThreatsChart(data.threats_by_type);
+                updateDashboardStats(data);
+                updateThreatStatistics(data.threats_by_type); // Add this line
+            } else {
+                console.error('Error in chart data:', data.message);
+                initializeChartsWithFallback();
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching chart data:', error);
+            initializeChartsWithFallback();
+        });
+}
+
+// Update the fallback function to include threat statistics
+function initializeChartsWithFallback() {
+    console.log('Using fallback chart data');
+    
+    // Fallback mock data
+    const mockAlertsData = {
+        hours: ['00:00', '02:00', '04:00', '06:00', '08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'],
+        alerts: [1, 0, 2, 1, 5, 8, 12, 9, 7, 4, 2, 1]
+    };
+    
+    const mockThreatsData = {
+        labels: ['Weapons', 'Violence', 'Restricted Area', 'Suspicious Activity'],
+        counts: [15, 9, 4, 11]
+    };
+    
+    createAlertsChart(mockAlertsData);
+    createThreatsChart(mockThreatsData);
+    updateThreatStatistics(mockThreatsData); // Add this line
+    
+    // Update stats with mock data
+    updateDashboardStats({
+        current_threats_count: 3,
+        total_alerts_today: 52
+    });
+}
+
+// Update the refreshCharts function
+function refreshCharts() {
+    console.log('Refreshing charts and statistics...');
+    initializeCharts();
+}
+</script>
+
+</body>
+</html>

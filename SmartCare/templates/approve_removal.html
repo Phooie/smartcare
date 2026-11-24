@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}SmartCare - Approve Removal{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card" style="max-width: 500px; margin: 50px auto;">
+        <div class="card-header">
+            <h2>👨‍⚕️ Caregiver Approval Required</h2>
+        </div>
+        <div class="modal-body">
+            <h3>{{ schedule.medication.name }}</h3>
+            <p>A request has been made to remove this medication from the schedule.</p>
+            
+            <form method="POST" style="margin-top: 30px;">
+                {% csrf_token %}
+                <div style="display: flex; gap: 15px; justify-content: center;">
+                    <button type="submit" class="approve-btn">✅ Approve Removal</button>
+                    <a href="{% url 'deny_removal' token schedule.id %}" class="deny-btn">❌ Deny</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    background: white;
+    border-radius: 24px;
+    padding: 25px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+}
+.card-header {
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+.approve-btn {
+    background: #22c55e;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+}
+.deny-btn {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-block;
+}
+</style>
+{% endblock %}

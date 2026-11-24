@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}SmartCare - Pending Approval{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="card" style="max-width: 600px; margin: 50px auto; text-align: center;">
+        <div class="card-header">
+            <h2>⏳ Medication Pending Approval</h2>
+        </div>
+        <div class="modal-body">
+            {% if interactions %}
+            <div class="interaction-item red" style="margin-bottom: 20px;">
+                <h4>⚠️ Potential Interactions Detected</h4>
+                {% for interaction in interactions %}
+                <p><strong>{{ interaction.drug1 }} + {{ interaction.drug2 }}</strong><br>
+                {{ interaction.description|truncatechars:150 }}</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <p><strong>{{ pending.name }}</strong> requires caregiver approval before it can be added to your schedule.</p>
+            <p>An approval request has been sent to your caregiver's email.</p>
+            <p>You will be notified once they approve or deny this medication.</p>
+            
+            <div class="info-box info-blue">
+                <strong>📧 Caregiver Email Sent</strong><br>
+                <small>The caregiver can approve or deny using the links in the email.</small>
+            </div>
+            
+            <a href="{% url 'schedule' %}" class="submit-modal-btn" style="display: inline-block; margin-top: 20px;">Return to Schedule</a>
+        </div>
+    </div>
+</div>
+
+<style>
+.card {
+    background: white;
+    border-radius: 24px;
+    padding: 25px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+}
+.card-header {
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+.interaction-item {
+    padding: 15px;
+    border-radius: 16px;
+    margin-bottom: 12px;
+    text-align: left;
+}
+.interaction-item.red {
+    background: #fff1f2;
+    border-left: 5px solid #ef4444;
+}
+.info-box {
+    background: #e0f2fe;
+    padding: 15px;
+    border-radius: 16px;
+    margin: 20px 0;
+    text-align: left;
+}
+.info-blue {
+    color: #0369a1;
+}
+.submit-modal-btn {
+    background: #2563eb;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    cursor: pointer;
+    text-decoration: none;
+}
+</style>
+{% endblock %}
